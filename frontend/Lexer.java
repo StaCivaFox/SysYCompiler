@@ -1,16 +1,21 @@
 package frontend;
 
+import utils.ErrorPrinter;
+
+import java.io.IOException;
+import java.io.PrintStream;
+
 public class Lexer {
     private String source;
     private Token curToken;
     private int pos = 0;
-    private int curLineno = 0;
+    private int curLineno = 1;
 
 
-    public Lexer(String input) {
+    public Lexer(String input) throws IOException {
         this.source = input;
         this.pos = 0;
-        this.curLineno = 0;
+        this.curLineno = 1;
         this.next();
     }
 
@@ -62,14 +67,14 @@ public class Lexer {
     private Token getStringConst() {
         StringBuilder sb = new StringBuilder();
         //处理开头的双引号
-        sb.append(pos);
+        sb.append(source.charAt(pos));
         pos++;
         while (pos < source.length() && source.charAt(pos) != '\"') {
             sb.append(source.charAt(pos));
             pos++;
         }
         //处理结尾的双引号
-        sb.append(pos);
+        sb.append(source.charAt(pos));
         pos++;
         String tokenContent = sb.toString();
         TokenType tokenType = TokenType.STRCON;
@@ -79,7 +84,7 @@ public class Lexer {
     private Token getCharConst() {
         StringBuilder sb = new StringBuilder();
         //处理开头的单引号
-        sb.append(pos);
+        sb.append(source.charAt(pos));
         pos++;
         while (pos < source.length() && source.charAt(pos) != '\'') {
             if (source.charAt(pos) == '\\') {
@@ -94,7 +99,7 @@ public class Lexer {
             }
         }
         //处理结尾的单引号
-        sb.append(pos);
+        sb.append(source.charAt(pos));
         pos++;
         String tokenContent = sb.toString();
         TokenType tokenType = TokenType.CHRCON;
@@ -102,7 +107,7 @@ public class Lexer {
     }
 
     //作为next()方法中的“默认分支”
-    private Token getSymbol() {
+    private Token getSymbol() throws IOException {
         char c = source.charAt(pos);
         StringBuilder sb = new StringBuilder();
         String tokenContent = null;
@@ -134,6 +139,9 @@ public class Lexer {
                 }
                 else {
                     //TODO: error
+                    ErrorPrinter.getInstance().print(String.valueOf(curLineno) + " " + "a");
+                    this.next();
+                    return this.curToken;
                 }
                 break;
             }
@@ -148,6 +156,9 @@ public class Lexer {
                 }
                 else {
                     //TODO: error
+                    ErrorPrinter.getInstance().print(String.valueOf(curLineno) + " " + "a");
+                    this.next();
+                    return this.curToken;
                 }
                 break;
             }
@@ -184,6 +195,7 @@ public class Lexer {
                         curLineno++;
                     }
                     this.next();
+                    return this.curToken;
                 }
                 //处理多行注释
                 else if (pos < source.length() && source.charAt(pos) == '*') {
@@ -209,6 +221,7 @@ public class Lexer {
                         }
                     }
                     this.next();
+                    return this.curToken;
                 }
                 //除号
                 else {
@@ -326,18 +339,22 @@ public class Lexer {
 
     //处理行号的变化
     //处理开头的空白符
-    public void next() {
-        if (pos == source.length()) {
-            return;
-        }
+    public void next() throws IOException {
         while (pos < source.length() &&
-                (source.charAt(pos) == ' ' || source.charAt(pos) == '\n' || source.charAt(pos) == '\t')) {
+                (source.charAt(pos) == ' ' || source.charAt(pos) == '\n' || source.charAt(pos) == '\t' || source.charAt(pos) == '\r')) {
             if (source.charAt(pos) == '\n') {
                 curLineno++;
             }
             pos++;
         }
 
+        if (pos == source.length()) {
+            return;
+        }
+        if (curLineno == 56) {
+            int a = 0;
+            a++;
+        }
         char c = source.charAt(pos);
         if (isIdentifierNondigit(c)) {
             curToken = getIdentOrReserve();
@@ -358,5 +375,10 @@ public class Lexer {
 
     public Token peek() {
         return this.curToken;
+    }
+
+    //词法分析作业用
+    public boolean reachEnd() {
+        return this.pos == source.length();
     }
 }
