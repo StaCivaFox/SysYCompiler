@@ -1,8 +1,10 @@
 package frontend;
 
+import frontend.elements.SyntaxNode;
+
 import java.math.BigInteger;
 
-public class Token {
+public class Token /*extends SyntaxNode*/ {
     private TokenType tokenType;
     private int lineno;
     private String content;
@@ -15,6 +17,10 @@ public class Token {
 
     public BigInteger getNumberValue() {
         return BigInteger.valueOf(Long.parseLong(this.content));
+    }
+
+    public TokenType getTokenType() {
+        return tokenType;
     }
 
     @Override

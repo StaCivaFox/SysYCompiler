@@ -1,6 +1,8 @@
 import frontend.Lexer;
+import frontend.Parser;
 import frontend.Token;
 import frontend.TokenType;
+import frontend.elements.CompUnit;
 
 import java.awt.*;
 import java.io.File;
@@ -19,8 +21,9 @@ public class Compiler {
         String source = Files.readString(Paths.get(fileName));
         source += "\n";
         Lexer lexer = new Lexer(source);
+        Parser parser = new Parser(lexer);
         //词法分析作业输出代码
-        String lexerOutputPath = "lexer.txt";
+        /*String lexerOutputPath = "lexer.txt";
 
         while (!lexer.reachEnd()) {
             Token token = lexer.peek();
@@ -28,6 +31,13 @@ public class Compiler {
             //System.out.println(token);
             Files.write(Paths.get(lexerOutputPath), (token.toString() + '\n').getBytes(),
                     StandardOpenOption.APPEND, StandardOpenOption.CREATE);
-        }
+        }*/
+
+        //语法分析作业输出代码
+        String parserOutputPath = "parser.txt";
+        CompUnit compUnit = parser.parseCompUnit();
+        System.out.println(compUnit.toString());
+        /*Files.write(Paths.get(parserOutputPath), compUnit.toString().getBytes(),
+                StandardOpenOption.APPEND, StandardOpenOption.CREATE);*/
     }
 }

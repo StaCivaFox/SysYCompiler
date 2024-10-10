@@ -351,10 +351,6 @@ public class Lexer {
         if (pos == source.length()) {
             return;
         }
-        if (curLineno == 56) {
-            int a = 0;
-            a++;
-        }
         char c = source.charAt(pos);
         if (isIdentifierNondigit(c)) {
             curToken = getIdentOrReserve();
@@ -380,5 +376,21 @@ public class Lexer {
     //词法分析作业用
     public boolean reachEnd() {
         return this.pos == source.length();
+    }
+
+    public int getCurLineno() {
+        return curLineno;
+    }
+
+    public int getPos() {
+        return pos;
+    }
+
+    //用于返回预读前的状态
+    //TODO:单独测试
+    public void restoreFromPreRead(int pos, int curLineno, Token curToken) {
+        this.pos = pos;
+        this.curLineno = curLineno;
+        this.curToken = curToken;
     }
 }
