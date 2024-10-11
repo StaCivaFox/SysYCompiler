@@ -23,6 +23,10 @@ public class Token /*extends SyntaxNode*/ {
         return tokenType;
     }
 
+    public int getLineno() {
+        return lineno;
+    }
+
     @Override
     public String toString() {
         return tokenType.toString() + " " + content;

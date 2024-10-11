@@ -3,6 +3,7 @@ package frontend;
 import frontend.elements.*;
 import frontend.elements.Character;
 import frontend.elements.Number;
+import utils.ErrorPrinter;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -95,6 +96,7 @@ public class Parser {
                 }
                 else {
                     //TODO:错误i
+                    ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "i");
                     return new ConstDecl(bType, constDefs);
                 }
             }
@@ -136,6 +138,7 @@ public class Parser {
                 if (tokenTypeIs(TokenType.RBRACK)) nextSym();
                 else {
                     //TODO:错误k
+                    ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "k");
                 }
             }
             if (tokenTypeIs(TokenType.ASSIGN)) {
@@ -194,6 +197,7 @@ public class Parser {
             }
             else {
                 //TODO:错误i
+                ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "i");
                 return new VarDecl(bType, varDefs);
             }
         }
@@ -212,6 +216,7 @@ public class Parser {
             if (tokenTypeIs(TokenType.RBRACK)) nextSym();
             else {
                 //TODO:错误k
+                ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "k");
             }
         }
         if (tokenTypeIs(TokenType.ASSIGN)) {
@@ -269,15 +274,19 @@ public class Parser {
                 block = parseBlock();
             }
             else {
-                //TODO:如果getsym()不属于FIRST(FuncFParams)，则有缺少右小括号的错误j
-                funcFParams = parseFuncFParams();
+
+                if (tokenTypeIs(TokenType.INTTK) || tokenTypeIs(TokenType.CHARTK)) {
+                    funcFParams = parseFuncFParams();
+                }
+                else funcFParams = null;
                 if (!tokenTypeIs(TokenType.RPARENT)) {
                     //TODO:错误j
+                    ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "j");
                 }
                 else {
                     nextSym();
-                    block = parseBlock();
                 }
+                block = parseBlock();
             }
             return new FuncDef(funcType, ident, funcFParams, block);
         }
@@ -300,6 +309,7 @@ public class Parser {
                     }
                     else {
                         //TODO:error j
+                        ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "j");
                     }
                     block = parseBlock();
                 }
@@ -363,6 +373,7 @@ public class Parser {
             }
             else {
                 //TODO:error k
+                ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "k");
             }
             return new FuncFParam(bType, ident, VarType.Array);
         }
@@ -418,6 +429,7 @@ public class Parser {
                 }
                 else {
                     //TODO:error j
+                    ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "j");
                 }
                 stmts.add(parseStmt());
                 if (tokenTypeIs(TokenType.ELSETK)) {
@@ -481,6 +493,7 @@ public class Parser {
             nextSym();
             if (!tokenTypeIs(TokenType.SEMICN)) {
                 //TODO:error i
+                ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "i");
             }
             else {
                 nextSym();
@@ -493,6 +506,7 @@ public class Parser {
             nextSym();
             if (!tokenTypeIs(TokenType.SEMICN)) {
                 //TODO: error i
+                ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "i");
             }
             else {
                 nextSym();
@@ -508,9 +522,15 @@ public class Parser {
             }
             else {
                 //TODO:如果getsym() 不属于 FISRT(Exp)，则有缺少分号的错误i
-                exps.add(parseExp());
+                if (tokenTypeIs(TokenType.LPARENT)
+                        || tokenTypeIs(TokenType.IDENFR)
+                        || tokenTypeIs(TokenType.INTCON) || tokenTypeIs(TokenType.CHRCON)
+                        || tokenTypeIs(TokenType.PLUS) || tokenTypeIs(TokenType.MINU) || tokenTypeIs(TokenType.NOT)) {
+                    exps.add(parseExp());
+                }
                 if (!tokenTypeIs(TokenType.SEMICN)) {
                     //TODO: error i
+                    ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "i");
                 }
                 else {
                     nextSym();
@@ -537,10 +557,12 @@ public class Parser {
                     }
                     else {
                         //TODO:error i
+                        ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "i");
                     }
                 }
                 else {
                     //TODO:error j
+                    ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "j");
                 }
                 return new Stmt(type, stringConst, exps);
             }
@@ -581,6 +603,7 @@ public class Parser {
                 }
                 else {
                     //TODO:error i
+                    ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "i");
                 }
                 return new Stmt(type, exps);
             }
@@ -603,6 +626,7 @@ public class Parser {
                     }
                     else {
                         //TODO:error i
+                        ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "i");
                     }
                     return new Stmt(type, exps);
                 }
@@ -621,9 +645,11 @@ public class Parser {
                                     nextSym();
                                 } else {
                                     //TODO: error i
+                                    ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "i");
                                 }
                             } else {
                                 //TODO: error j
+                                ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "j");
                             }
                             return new Stmt(type, lVal);
                         } else if (tokenTypeIs(TokenType.GETCHARTK)) {
@@ -636,9 +662,11 @@ public class Parser {
                                     nextSym();
                                 } else {
                                     //TODO: error i
+                                    ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "i");
                                 }
                             } else {
                                 //TODO: error j
+                                ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "j");
                             }
                             return new Stmt(type, lVal);
                         }
@@ -650,6 +678,7 @@ public class Parser {
                                 nextSym();
                             } else {
                                 //TODO: error i
+                                ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "i");
                             }
                             return new Stmt(type, lVal, exps);
                         }
@@ -690,6 +719,7 @@ public class Parser {
             }
             else {
                 //TODO:error k
+                ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "k");
             }
             return new LVal(ident, exps);
         }
@@ -711,6 +741,7 @@ public class Parser {
             }
             else {
                 //TODO:error j
+                ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "j");
             }
             return new PrimaryExp(exp);
         }
@@ -753,11 +784,18 @@ public class Parser {
             }
             else {
                 //TODO:如果getsym()不属于FIRST(FuncRParams)，则说明有缺少右小括号的错误
-                funcRParams = parseFuncRParams();
+                if (tokenTypeIs(TokenType.LPARENT)
+                        || tokenTypeIs(TokenType.IDENFR)
+                        || tokenTypeIs(TokenType.INTCON) || tokenTypeIs(TokenType.CHRCON)
+                        || tokenTypeIs(TokenType.PLUS) || tokenTypeIs(TokenType.MINU) || tokenTypeIs(TokenType.NOT)) {
+                    funcRParams = parseFuncRParams();
+                }
+                else funcRParams = null;
                 if (tokenTypeIs(TokenType.RPARENT)) {
                     nextSym();
                 } else {
                     //TODO:error j
+                    ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "j");
                 }
             }
             return new UnaryExp(ident, funcRParams);

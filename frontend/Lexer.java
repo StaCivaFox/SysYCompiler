@@ -10,6 +10,7 @@ public class Lexer {
     private Token curToken;
     private int pos = 0;
     private int curLineno = 1;
+    private Token prevToken;      //用于报错
 
 
     public Lexer(String input) throws IOException {
@@ -140,8 +141,10 @@ public class Lexer {
                 else {
                     //TODO: error
                     ErrorPrinter.getInstance().print(String.valueOf(curLineno) + " " + "a");
-                    this.next();
-                    return this.curToken;
+                    //this.next();
+                    //return this.curToken;
+                    tokenContent = sb.toString();
+                    tokenType = TokenType.AND;
                 }
                 break;
             }
@@ -157,8 +160,10 @@ public class Lexer {
                 else {
                     //TODO: error
                     ErrorPrinter.getInstance().print(String.valueOf(curLineno) + " " + "a");
-                    this.next();
-                    return this.curToken;
+                    //this.next();
+                    //return this.curToken;
+                    tokenContent = sb.toString();
+                    tokenType = TokenType.OR;
                 }
                 break;
             }
@@ -351,6 +356,7 @@ public class Lexer {
         if (pos == source.length()) {
             return;
         }
+        prevToken = curToken;
         char c = source.charAt(pos);
         if (isIdentifierNondigit(c)) {
             curToken = getIdentOrReserve();
@@ -386,8 +392,11 @@ public class Lexer {
         return pos;
     }
 
+    public Token getPrevToken() {
+        return this.prevToken;
+    }
+
     //用于返回预读前的状态
-    //TODO:单独测试
     public void restoreFromPreRead(int pos, int curLineno, Token curToken) {
         this.pos = pos;
         this.curLineno = curLineno;
