@@ -10,6 +10,9 @@ public class BlockItem extends SyntaxNode {
     }
 
     public BlockItem(Stmt stmt) {
+        if (stmt == null) {
+            int a;
+        }
         this.stmt = stmt;
         childrenNodes.add(stmt);
     }

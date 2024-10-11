@@ -23,6 +23,7 @@ public class LOrExp extends SyntaxNode {
             sb.append("<LOrExp>\n");
             if (i < lOrExpOps.size()) {
                 sb.append(lOrExpOps.get(i).toString());
+                sb.append("\n");
                 i++;
             }
         }

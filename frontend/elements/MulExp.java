@@ -23,6 +23,7 @@ public class MulExp extends SyntaxNode {
             sb.append("<MulExp>\n");
             if (i < mulExpOps.size()) {
                 sb.append(mulExpOps.get(i).toString());
+                sb.append("\n");
                 i++;
             }
         }

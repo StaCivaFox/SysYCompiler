@@ -27,6 +27,7 @@ public class ConstDef extends SyntaxNode{
         }
         sb.append("ASSIGN =\n");
         sb.append(constInitVal.toString());
+        sb.append("<ConstDef>\n");
         return sb.toString();
     }
 }

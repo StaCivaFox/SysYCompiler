@@ -23,7 +23,7 @@ public class InitVal extends SyntaxNode{
         StringBuilder sb = new StringBuilder();
         if (stringConst != null) {
             sb.append(stringConst.toString());
-            sb.append("<InitVal\n>");
+            sb.append("<InitVal>\n");
             return sb.toString();
         }
         if (varType.equals(VarType.Var)) {

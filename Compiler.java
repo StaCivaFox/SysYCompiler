@@ -36,8 +36,8 @@ public class Compiler {
         //语法分析作业输出代码
         String parserOutputPath = "parser.txt";
         CompUnit compUnit = parser.parseCompUnit();
-        System.out.println(compUnit.toString());
-        /*Files.write(Paths.get(parserOutputPath), compUnit.toString().getBytes(),
-                StandardOpenOption.APPEND, StandardOpenOption.CREATE);*/
+        //System.out.println(compUnit.toString());
+        Files.write(Paths.get(parserOutputPath), compUnit.toString().getBytes(),
+                StandardOpenOption.APPEND, StandardOpenOption.CREATE);
     }
 }

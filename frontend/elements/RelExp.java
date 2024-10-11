@@ -23,6 +23,7 @@ public class RelExp extends SyntaxNode {
             sb.append("<RelExp>\n");
             if (i < relExpOps.size()) {
                 sb.append(relExpOps.get(i).toString());
+                sb.append("\n");
                 i++;
             }
         }

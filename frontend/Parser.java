@@ -266,6 +266,7 @@ public class Parser {
             if (tokenTypeIs(TokenType.RPARENT)) {
                 funcFParams = null;
                 nextSym();
+                block = parseBlock();
             }
             else {
                 //TODO:如果getsym()不属于FIRST(FuncFParams)，则有缺少右小括号的错误j
@@ -354,6 +355,7 @@ public class Parser {
         Ident ident;
         bType = parseBType();
         ident = new Ident(getSym());
+        nextSym();
         if (tokenTypeIs(TokenType.LBRACK)) {
             nextSym();
             if (tokenTypeIs(TokenType.RBRACK)) {
@@ -556,6 +558,7 @@ public class Parser {
         //空语句
         else if (tokenTypeIs(TokenType.SEMICN)) {
             type = Stmt.StmtType.Expression;
+            nextSym();
             return new Stmt(type, exps);
         }
         //赋值或不赋值
@@ -570,7 +573,7 @@ public class Parser {
                     || firstType.equals(TokenType.INTCON)
                     || firstType.equals(TokenType.CHRCON)
                     || (firstType.equals(TokenType.PLUS) || firstType.equals(TokenType.MINU) || firstType.equals(TokenType.NOT))
-                    || (firstType.equals(TokenType.IDENFR) && tokenTypeIs(TokenType.LPARENT, 1))) {
+                    /*|| (firstType.equals(TokenType.IDENFR) && !tokenTypeIs(TokenType.ASSIGN, 1))*/) {
                 type = Stmt.StmtType.Expression;
                 exps.add(parseExp());
                 if (tokenTypeIs(TokenType.SEMICN)) {
@@ -583,62 +586,78 @@ public class Parser {
             }
             //Assignment
             else {
-                lVal = parseLVal();
-                if (tokenTypeIs(TokenType.ASSIGN)) {
-                    nextSym();
-                    //input assignment
-                    if (tokenTypeIs(TokenType.GETINTTK)) {
-                        type = Stmt.StmtType.AssignmentInputInt;
-                        nextSym();
-                        nextSym();      //skip left parent
-                        if (tokenTypeIs(TokenType.RPARENT)) {
-                            nextSym();
-                            if (tokenTypeIs(TokenType.SEMICN)) {
-                                nextSym();
-                            }
-                            else {
-                                //TODO: error i
-                            }
-                        }
-                        else {
-                            //TODO: error j
-                        }
-                        return new Stmt(type, lVal);
+                int foreseeStep = 1;
+                int expFlag = 1;
+                while (!tokenTypeIs(TokenType.SEMICN, foreseeStep)) {
+                    if (tokenTypeIs(TokenType.ASSIGN, foreseeStep)) {
+                        expFlag = 0;
+                        break;
                     }
-                    else if (tokenTypeIs(TokenType.GETCHARTK)) {
-                        type = Stmt.StmtType.AssignmentInputChar;
+                    foreseeStep++;
+                }
+                if (expFlag == 1) {
+                    type = Stmt.StmtType.Expression;
+                    exps.add(parseExp());
+                    if (tokenTypeIs(TokenType.SEMICN)) {
                         nextSym();
-                        nextSym();      //skip left parent
-                        if (tokenTypeIs(TokenType.RPARENT)) {
-                            nextSym();
-                            if (tokenTypeIs(TokenType.SEMICN)) {
-                                nextSym();
-                            }
-                            else {
-                                //TODO: error i
-                            }
-                        }
-                        else {
-                            //TODO: error j
-                        }
-                        return new Stmt(type, lVal);
                     }
-                    //LVal = Exp
                     else {
-                        type = Stmt.StmtType.Assignment;
-                        exps.add(parseExp());
-                        if (tokenTypeIs(TokenType.SEMICN)) {
-                            nextSym();
-                        }
-                        else {
-                            //TODO: error i
-                        }
-                        return new Stmt(type, lVal, exps);
+                        //TODO:error i
                     }
+                    return new Stmt(type, exps);
                 }
                 else {
-                    //TODO: wrong assignment
-                    return null;
+                    lVal = parseLVal();
+                    if (tokenTypeIs(TokenType.ASSIGN)) {
+                        nextSym();
+                        //input assignment
+                        if (tokenTypeIs(TokenType.GETINTTK)) {
+                            type = Stmt.StmtType.AssignmentInputInt;
+                            nextSym();
+                            nextSym();      //skip left parent
+                            if (tokenTypeIs(TokenType.RPARENT)) {
+                                nextSym();
+                                if (tokenTypeIs(TokenType.SEMICN)) {
+                                    nextSym();
+                                } else {
+                                    //TODO: error i
+                                }
+                            } else {
+                                //TODO: error j
+                            }
+                            return new Stmt(type, lVal);
+                        } else if (tokenTypeIs(TokenType.GETCHARTK)) {
+                            type = Stmt.StmtType.AssignmentInputChar;
+                            nextSym();
+                            nextSym();      //skip left parent
+                            if (tokenTypeIs(TokenType.RPARENT)) {
+                                nextSym();
+                                if (tokenTypeIs(TokenType.SEMICN)) {
+                                    nextSym();
+                                } else {
+                                    //TODO: error i
+                                }
+                            } else {
+                                //TODO: error j
+                            }
+                            return new Stmt(type, lVal);
+                        }
+                        //LVal = Exp
+                        else {
+                            type = Stmt.StmtType.Assignment;
+                            exps.add(parseExp());
+                            if (tokenTypeIs(TokenType.SEMICN)) {
+                                nextSym();
+                            } else {
+                                //TODO: error i
+                            }
+                            return new Stmt(type, lVal, exps);
+                        }
+                    }
+                    else {
+                        //TODO: wrong assignment
+                        return null;
+                    }
                 }
             }
         }
@@ -820,6 +839,7 @@ public class Parser {
     public EqExp parseEqExp() throws IOException {
         ArrayList<RelExp> relExps = new ArrayList<>();
         ArrayList<Token> eqExpOps = new ArrayList<>();
+        relExps.add(parseRelExp());
         while (tokenTypeIs(TokenType.EQL) || tokenTypeIs(TokenType.NEQ)) {
             eqExpOps.add(getSym());
             nextSym();
@@ -831,6 +851,7 @@ public class Parser {
     public LAndExp parseLAndExp() throws IOException {
         ArrayList<EqExp> eqExps = new ArrayList<>();
         ArrayList<Token> lAndExpOps = new ArrayList<>();
+        eqExps.add(parseEqExp());
         while (tokenTypeIs(TokenType.AND)) {
             lAndExpOps.add(getSym());
             nextSym();
@@ -842,6 +863,7 @@ public class Parser {
     public LOrExp parseLOrExp() throws IOException {
         ArrayList<LAndExp> lAndExps = new ArrayList<>();
         ArrayList<Token> lOrExpOps = new ArrayList<>();
+        lAndExps.add(parseLAndExp());
         while (tokenTypeIs(TokenType.OR)) {
             lOrExpOps.add(getSym());
             nextSym();

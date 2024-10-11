@@ -23,6 +23,7 @@ public class AddExp extends SyntaxNode {
             sb.append("<AddExp>\n");
             if (i < addExpOps.size()){
                 sb.append(addExpOps.get(i).toString());
+                sb.append("\n");
                 i++;
             }
         }

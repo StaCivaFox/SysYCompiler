@@ -23,6 +23,7 @@ public class LAndExp extends SyntaxNode {
             sb.append("<LAndExp>\n");
             if (i < lAndExpOps.size()) {
                 sb.append(lAndExpOps.get(i).toString());
+                sb.append("\n");
                 i++;
             }
         }

@@ -23,6 +23,7 @@ public class EqExp extends SyntaxNode {
             sb.append("<EqExp>\n");
             if (i < eqExpOps.size()) {
                 sb.append(eqExpOps.get(i).toString());
+                sb.append("\n");
                 i++;
             }
         }
