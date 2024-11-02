@@ -1,6 +1,8 @@
 package frontend.elements;
 
 import frontend.Token;
+import middle.SymbolTable;
+import middle.SymbolType;
 
 import java.util.ArrayList;
 
@@ -12,6 +14,10 @@ public class MulExp extends SyntaxNode {
         this.unaryExps = unaryExps;
         this.mulExpOps = mulExpOps;
         childrenNodes.addAll(unaryExps);
+    }
+
+    public SymbolType getType(SymbolTable symbolTable) {
+        return unaryExps.get(0).getType(symbolTable);
     }
 
     @Override

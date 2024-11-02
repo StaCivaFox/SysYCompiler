@@ -3,6 +3,8 @@ import frontend.Parser;
 import frontend.Token;
 import frontend.TokenType;
 import frontend.elements.CompUnit;
+import middle.Visitor;
+import utils.ErrorReporter;
 
 import java.awt.*;
 import java.io.File;
@@ -34,10 +36,25 @@ public class Compiler {
         }*/
 
         //语法分析作业输出代码
-        String parserOutputPath = "parser.txt";
+        /*String parserOutputPath = "parser.txt";
         CompUnit compUnit = parser.parseCompUnit();
         //System.out.println(compUnit.toString());
         Files.write(Paths.get(parserOutputPath), compUnit.toString().getBytes(),
                 StandardOpenOption.APPEND, StandardOpenOption.CREATE);
+        if (ErrorReporter.getInstance().hasError()) {
+            ErrorReporter.getInstance().printError();
+        }*/
+
+        CompUnit compUnit = parser.parseCompUnit();
+
+        //语义分析作业输出代码
+        String symbolOutputPath = "symbol.txt";
+        Visitor visitor = new Visitor(compUnit);
+        visitor.visitCompUnit(compUnit);
+        Files.write(Paths.get(symbolOutputPath), visitor.currentSymbolTable.toString().getBytes(),
+                StandardOpenOption.APPEND, StandardOpenOption.CREATE);
+        if (ErrorReporter.getInstance().hasError()) {
+            ErrorReporter.getInstance().printError();
+        }
     }
 }

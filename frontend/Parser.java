@@ -3,7 +3,7 @@ package frontend;
 import frontend.elements.*;
 import frontend.elements.Character;
 import frontend.elements.Number;
-import utils.ErrorPrinter;
+import utils.ErrorReporter;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -96,7 +96,8 @@ public class Parser {
                 }
                 else {
                     //TODO:错误i
-                    ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "i");
+                    //ErrorReporter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "i");
+                    ErrorReporter.getInstance().addError(lexer.getPrevToken().getLineno(), "i");
                     return new ConstDecl(bType, constDefs);
                 }
             }
@@ -138,7 +139,8 @@ public class Parser {
                 if (tokenTypeIs(TokenType.RBRACK)) nextSym();
                 else {
                     //TODO:错误k
-                    ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "k");
+                    //ErrorReporter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "k");
+                    ErrorReporter.getInstance().addError(lexer.getPrevToken().getLineno(), "k");
                 }
             }
             if (tokenTypeIs(TokenType.ASSIGN)) {
@@ -197,7 +199,7 @@ public class Parser {
             }
             else {
                 //TODO:错误i
-                ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "i");
+                ErrorReporter.getInstance().addError(lexer.getPrevToken().getLineno(), "i");
                 return new VarDecl(bType, varDefs);
             }
         }
@@ -216,7 +218,7 @@ public class Parser {
             if (tokenTypeIs(TokenType.RBRACK)) nextSym();
             else {
                 //TODO:错误k
-                ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "k");
+                ErrorReporter.getInstance().addError(lexer.getPrevToken().getLineno(), "k");
             }
         }
         if (tokenTypeIs(TokenType.ASSIGN)) {
@@ -281,14 +283,14 @@ public class Parser {
                 else funcFParams = null;
                 if (!tokenTypeIs(TokenType.RPARENT)) {
                     //TODO:错误j
-                    ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "j");
+                    ErrorReporter.getInstance().addError(lexer.getPrevToken().getLineno(), "j");
                 }
                 else {
                     nextSym();
                 }
                 block = parseBlock();
             }
-            return new FuncDef(funcType, ident, funcFParams, block);
+            return new FuncDef(funcType, ident, funcFParams, block, lexer.getPrevToken().getLineno());
         }
         else {
             //TODO:实验未要求处理的错误
@@ -309,7 +311,7 @@ public class Parser {
                     }
                     else {
                         //TODO:error j
-                        ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "j");
+                        ErrorReporter.getInstance().addError(lexer.getPrevToken().getLineno(), "j");
                     }
                     block = parseBlock();
                 }
@@ -324,7 +326,8 @@ public class Parser {
         else {
             //TODO:error:no int
         }
-        return new MainFuncDef(block);
+        //对于main函数，结束时的}是最后一个token，即不会有“贪婪匹配导致目前指针在}下一个token的情况”
+        return new MainFuncDef(block, lexer.peek().getLineno());
     }
 
     public FuncType parseFuncType() throws IOException {
@@ -373,7 +376,7 @@ public class Parser {
             }
             else {
                 //TODO:error k
-                ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "k");
+                ErrorReporter.getInstance().addError(lexer.getPrevToken().getLineno(), "k");
             }
             return new FuncFParam(bType, ident, VarType.Array);
         }
@@ -429,7 +432,7 @@ public class Parser {
                 }
                 else {
                     //TODO:error j
-                    ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "j");
+                    ErrorReporter.getInstance().addError(lexer.getPrevToken().getLineno(), "j");
                 }
                 stmts.add(parseStmt());
                 if (tokenTypeIs(TokenType.ELSETK)) {
@@ -490,32 +493,35 @@ public class Parser {
         //break
         else if (tokenTypeIs(TokenType.BREAKTK)) {
             type = Stmt.StmtType.Break;
+            Token breakToken = getSym();
             nextSym();
             if (!tokenTypeIs(TokenType.SEMICN)) {
                 //TODO:error i
-                ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "i");
+                ErrorReporter.getInstance().addError(lexer.getPrevToken().getLineno(), "i");
             }
             else {
                 nextSym();
             }
-            return new Stmt(type);
+            return new Stmt(type, breakToken);
         }
         //continue
         else if (tokenTypeIs(TokenType.CONTINUETK)) {
             type = Stmt.StmtType.Continue;
+            Token continueToken = getSym();
             nextSym();
             if (!tokenTypeIs(TokenType.SEMICN)) {
                 //TODO: error i
-                ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "i");
+                ErrorReporter.getInstance().addError(lexer.getPrevToken().getLineno(), "i");
             }
             else {
                 nextSym();
             }
-            return new Stmt(type);
+            return new Stmt(type, continueToken);
         }
         //return
         else if (tokenTypeIs(TokenType.RETURNTK)) {
             type = Stmt.StmtType.Return;
+            Token returnToken = getSym();
             nextSym();
             if (tokenTypeIs(TokenType.SEMICN)) {
                 nextSym();      //skip semicolon
@@ -530,17 +536,18 @@ public class Parser {
                 }
                 if (!tokenTypeIs(TokenType.SEMICN)) {
                     //TODO: error i
-                    ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "i");
+                    ErrorReporter.getInstance().addError(lexer.getPrevToken().getLineno(), "i");
                 }
                 else {
                     nextSym();
                 }
             }
-            return new Stmt(type, exps);
+            return new Stmt(type, exps, returnToken);
         }
         //printf
         else if (tokenTypeIs(TokenType.PRINTFTK)) {
             type = Stmt.StmtType.Print;
+            Token printfToken = getSym();
             nextSym();
             if (tokenTypeIs(TokenType.LPARENT)) {
                 nextSym();
@@ -557,14 +564,14 @@ public class Parser {
                     }
                     else {
                         //TODO:error i
-                        ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "i");
+                        ErrorReporter.getInstance().addError(lexer.getPrevToken().getLineno(), "i");
                     }
                 }
                 else {
                     //TODO:error j
-                    ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "j");
+                    ErrorReporter.getInstance().addError(lexer.getPrevToken().getLineno(), "j");
                 }
-                return new Stmt(type, stringConst, exps);
+                return new Stmt(type, stringConst, exps, printfToken);
             }
             else {
                 //TODO:error wrong printf
@@ -603,13 +610,13 @@ public class Parser {
                 }
                 else {
                     //TODO:error i
-                    ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "i");
+                    ErrorReporter.getInstance().addError(lexer.getPrevToken().getLineno(), "i");
                 }
                 return new Stmt(type, exps);
             }
             //Assignment
             else {
-                int foreseeStep = 1;
+                /*int foreseeStep = 1;
                 int expFlag = 1;
                 while (!tokenTypeIs(TokenType.SEMICN, foreseeStep)) {
                     if (tokenTypeIs(TokenType.ASSIGN, foreseeStep)) {
@@ -629,9 +636,27 @@ public class Parser {
                         ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "i");
                     }
                     return new Stmt(type, exps);
+                }*/
+                int oldPos = lexer.getPos();
+                int oldLineno = lexer.getCurLineno();
+                Token oldToken = lexer.peek();
+                LVal tmpLVal = parseLVal();
+                if (!tokenTypeIs(TokenType.ASSIGN)){
+                    lexer.restoreFromPreRead(oldPos, oldLineno, oldToken);
+                    type = Stmt.StmtType.Expression;
+                    exps.add(parseExp());
+                    if (tokenTypeIs(TokenType.SEMICN)) {
+                        nextSym();
+                    }
+                    else {
+                        ErrorReporter.getInstance().addError(lexer.getPrevToken().getLineno(), "i");
+                    }
+                    return new Stmt(type, exps);
                 }
+
                 else {
-                    lVal = parseLVal();
+                    //lexer.restoreFromPreRead(oldPos, oldLineno, oldToken);
+                    lVal = /*parseLVal()*/tmpLVal;
                     if (tokenTypeIs(TokenType.ASSIGN)) {
                         nextSym();
                         //input assignment
@@ -645,11 +670,11 @@ public class Parser {
                                     nextSym();
                                 } else {
                                     //TODO: error i
-                                    ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "i");
+                                    ErrorReporter.getInstance().addError(lexer.getPrevToken().getLineno(), "i");
                                 }
                             } else {
                                 //TODO: error j
-                                ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "j");
+                                ErrorReporter.getInstance().addError(lexer.getPrevToken().getLineno(), "j");
                             }
                             return new Stmt(type, lVal);
                         } else if (tokenTypeIs(TokenType.GETCHARTK)) {
@@ -662,11 +687,11 @@ public class Parser {
                                     nextSym();
                                 } else {
                                     //TODO: error i
-                                    ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "i");
+                                    ErrorReporter.getInstance().addError(lexer.getPrevToken().getLineno(), "i");
                                 }
                             } else {
                                 //TODO: error j
-                                ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "j");
+                                ErrorReporter.getInstance().addError(lexer.getPrevToken().getLineno(), "j");
                             }
                             return new Stmt(type, lVal);
                         }
@@ -678,7 +703,7 @@ public class Parser {
                                 nextSym();
                             } else {
                                 //TODO: error i
-                                ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "i");
+                                ErrorReporter.getInstance().addError(lexer.getPrevToken().getLineno(), "i");
                             }
                             return new Stmt(type, lVal, exps);
                         }
@@ -719,7 +744,7 @@ public class Parser {
             }
             else {
                 //TODO:error k
-                ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "k");
+                ErrorReporter.getInstance().addError(lexer.getPrevToken().getLineno(), "k");
             }
             return new LVal(ident, exps);
         }
@@ -741,7 +766,7 @@ public class Parser {
             }
             else {
                 //TODO:error j
-                ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "j");
+                ErrorReporter.getInstance().addError(lexer.getPrevToken().getLineno(), "j");
             }
             return new PrimaryExp(exp);
         }
@@ -795,7 +820,7 @@ public class Parser {
                     nextSym();
                 } else {
                     //TODO:error j
-                    ErrorPrinter.getInstance().print(lexer.getPrevToken().getLineno() + " " + "j");
+                    ErrorReporter.getInstance().addError(lexer.getPrevToken().getLineno(), "j");
                 }
             }
             return new UnaryExp(ident, funcRParams);

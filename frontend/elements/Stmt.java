@@ -1,5 +1,7 @@
 package frontend.elements;
 
+import frontend.Token;
+
 import java.util.ArrayList;
 
 public class Stmt extends SyntaxNode {
@@ -27,6 +29,12 @@ public class Stmt extends SyntaxNode {
     public ForStmt forStmtLoop;
     public StringConst stringConst;
     public StmtType stmtType;
+
+    public Token breakToken;
+    public Token continueToken;
+
+    public Token returnToken;
+    public Token printfToken;
 
     //TODO:根据需要补充构造函数
     public Stmt(StmtType stmtType, LVal lVal, ArrayList<Exp> exps) {
@@ -76,8 +84,19 @@ public class Stmt extends SyntaxNode {
         childrenNodes.addAll(stmts);
     }
 
-    public Stmt(StmtType stmtType) {
+    public Stmt(StmtType stmtType, Token token) {
         this.stmtType = stmtType;
+        if (stmtType.equals(StmtType.Break)) {
+            this.breakToken = token;
+        }
+        else this.continueToken = token;
+    }
+
+    public Stmt(StmtType stmtType, ArrayList<Exp> exps, Token token) {
+        this.stmtType = stmtType;
+        this.exps = exps;
+        this.returnToken = token;
+        childrenNodes.addAll(exps);
     }
 
     public Stmt(StmtType stmtType, LVal lVal) {
@@ -86,10 +105,11 @@ public class Stmt extends SyntaxNode {
         childrenNodes.add(lVal);
     }
 
-    public Stmt(StmtType stmtType, StringConst stringConst, ArrayList<Exp> exps) {
+    public Stmt(StmtType stmtType, StringConst stringConst, ArrayList<Exp> exps, Token token) {
         this.stringConst = stringConst;
         this.exps = exps;
         this.stmtType = stmtType;
+        this.printfToken = token;
         childrenNodes.add(stringConst);
         childrenNodes.addAll(exps);
     }

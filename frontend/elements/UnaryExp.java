@@ -1,5 +1,10 @@
 package frontend.elements;
 
+import middle.Symbol;
+import middle.SymbolTable;
+import middle.SymbolType;
+import utils.ErrorReporter;
+
 public class UnaryExp extends SyntaxNode {
     public PrimaryExp primaryExp;
     public Ident ident;
@@ -24,6 +29,21 @@ public class UnaryExp extends SyntaxNode {
         this.unaryExp = unaryExp;
         childrenNodes.add(unaryOp);
         childrenNodes.add(unaryExp);
+    }
+
+    public SymbolType getType(SymbolTable symbolTable) {
+        if (primaryExp != null) return primaryExp.getType(symbolTable);
+        else if (ident != null) {
+            Symbol identSymbol = symbolTable.getSymbol(ident.name());
+            if (identSymbol != null) {
+                return identSymbol.type;
+            }
+            else {
+                //ErrorReporter.getInstance().addError(ident.lineno(), "c");
+                return null;
+            }
+        }
+        else return unaryExp.getType(symbolTable);
     }
 
     @Override

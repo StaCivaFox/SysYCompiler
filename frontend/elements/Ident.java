@@ -13,4 +13,12 @@ public class Ident extends SyntaxNode{
     public String toString() {
         return token.toString() + "\n";
     }
+
+    public String name() {
+        return token.getContent();
+    }
+
+    public int lineno() {
+        return token.getLineno();
+    }
 }

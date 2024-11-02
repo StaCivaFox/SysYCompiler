@@ -1,9 +1,8 @@
 package frontend;
 
-import utils.ErrorPrinter;
+import utils.ErrorReporter;
 
 import java.io.IOException;
-import java.io.PrintStream;
 
 public class Lexer {
     private String source;
@@ -140,7 +139,8 @@ public class Lexer {
                 }
                 else {
                     //TODO: error
-                    ErrorPrinter.getInstance().print(String.valueOf(curLineno) + " " + "a");
+                    //ErrorReporter.getInstance().print(String.valueOf(curLineno) + " " + "a");
+                    ErrorReporter.getInstance().addError(curLineno, "a");
                     //this.next();
                     //return this.curToken;
                     tokenContent = sb.toString();
@@ -159,7 +159,8 @@ public class Lexer {
                 }
                 else {
                     //TODO: error
-                    ErrorPrinter.getInstance().print(String.valueOf(curLineno) + " " + "a");
+                    //ErrorReporter.getInstance().print(String.valueOf(curLineno) + " " + "a");
+                    ErrorReporter.getInstance().addError(curLineno, "a");
                     //this.next();
                     //return this.curToken;
                     tokenContent = sb.toString();

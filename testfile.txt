@@ -1,25 +1,16 @@
-void f({}
-void print_fibonacci_n(int n1, int n2, int n3
-{
-	printf("Fibonacci Array %d : %d  %d : %d  %d : %d\n", n1, fibonacci[n1], n2, fibonacci[n2], n3, fibonacci[n3]);
-	return
+void my_print(int param) {
+    if (1 == 0) {
+        int a = 1;
+        if (2 == 1) {
+            return 1;
+        }
+        return (1+ 10 ) *10;
+    }
+    else
+        return 20;
+
+    return (param + 12) * 10;
 }
-
-
-int main()
-{
-    if (1 & 2);
-	printf("a\n");
-	printf("a\n");
-	printf("a\n");
-	printf("a\n");
-	printf("a\n");
-	printf("a\n");
-	printf("a\n");
-
-    print_fibonacci_n(
-
-
-
+int main() {
     return 0;
 }
