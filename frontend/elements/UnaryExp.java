@@ -34,14 +34,11 @@ public class UnaryExp extends SyntaxNode {
     public SymbolType getType(SymbolTable symbolTable) {
         if (primaryExp != null) return primaryExp.getType(symbolTable);
         else if (ident != null) {
+            //这种情况是函数调用
             Symbol identSymbol = symbolTable.getSymbol(ident.name());
-            if (identSymbol != null) {
-                return identSymbol.type;
-            }
-            else {
-                //ErrorReporter.getInstance().addError(ident.lineno(), "c");
-                return null;
-            }
+            if (identSymbol.type.equals(SymbolType.IntFunc)) return SymbolType.Int;
+            else if (identSymbol.type.equals(SymbolType.CharFunc)) return SymbolType.Char;
+            else return null;
         }
         else return unaryExp.getType(symbolTable);
     }

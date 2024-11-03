@@ -34,14 +34,7 @@ public class PrimaryExp extends SyntaxNode {
     public SymbolType getType(SymbolTable symbolTable) {
         if (exp != null) return exp.getType(symbolTable);
         else if (lVal != null) {
-            Symbol identSymbol = symbolTable.getSymbol(lVal.ident.name());
-            if (identSymbol != null) {
-                return identSymbol.type;
-            }
-            else {
-                //ErrorReporter.getInstance().addError(lVal.ident.lineno(), "c");
-                return null;
-            }
+            return lVal.getType(symbolTable);
         }
         else if (number != null) return SymbolType.Int;
         else return SymbolType.Char;

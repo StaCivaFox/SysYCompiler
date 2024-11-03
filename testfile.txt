@@ -1,16 +1,17 @@
-void my_print(int param) {
-    if (1 == 0) {
-        int a = 1;
-        if (2 == 1) {
-            return 1;
-        }
-        return (1+ 10 ) *10;
-    }
-    else
-        return 20;
-
-    return (param + 12) * 10;
+char func1(char b[]) {
+    return 'c';
 }
-int main() {
+
+int func2(char c) {
+    return 1;
+}
+
+int func3(int a) {
+    return a;
+}
+
+int main(){
+    char b[6];
+    func3( func2( func1(b[0]) ) );
     return 0;
 }

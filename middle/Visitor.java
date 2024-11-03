@@ -173,7 +173,7 @@ public class Visitor {
         }
         funcSymbol.setFParams(funcFParams);
         //在调用visitBlock()之前，总是已经修改了currentSymbolTable，进入了新的作用域
-        visitBlock(funcDef.block, funcSymbol);
+        visitBlock(funcDef.block, funcSymbol, false);
         if (!funcDef.funcType.type.equals("void") && !funcDef.hasReturn()) {
             //TODO:无return错误g
             ErrorReporter.getInstance().addError(funcDef.endLine, "g");
@@ -184,7 +184,7 @@ public class Visitor {
     public void visitMainFuncDef(MainFuncDef mainFuncDef) {
         currentSymbolTable = currentSymbolTable.newTable(fieldCnt);
         fieldCnt++;
-        visitBlock(mainFuncDef.block);
+        visitBlock(mainFuncDef.block, null, false);
         if (!mainFuncDef.hasReturn()) {
             //TODO:无return错误g
             ErrorReporter.getInstance().addError(mainFuncDef.endLine, "g");
@@ -192,37 +192,16 @@ public class Visitor {
         currentSymbolTable = currentSymbolTable.back();
     }
 
-    public void visitBlock(Block block) {
+    public void visitBlock(Block block, FuncSymbol funcSymbol, boolean inLoop) {
         for (BlockItem blockItem : block.blockItems) {
-            visitBlockItem(blockItem);
+            visitBlockItem(blockItem, funcSymbol, inLoop);
         }
     }
 
-    public void visitBlock(Block block, boolean inLoop) {
-        for (BlockItem blockItem : block.blockItems) {
-            visitBlockItem(blockItem, inLoop);
-        }
-    }
 
-    public void visitBlock(Block block, FuncSymbol funcSymbol) {
-        for (BlockItem blockItem : block.blockItems) {
-            visitBlockItem(blockItem, funcSymbol);
-        }
-    }
-
-    public void visitBlockItem(BlockItem blockItem) {
+    public void visitBlockItem(BlockItem blockItem, FuncSymbol funcSymbol, boolean inLoop) {
         if (blockItem.decl != null) visitDecl(blockItem.decl);
-        else visitStmt(blockItem.stmt);
-    }
-
-    public void visitBlockItem(BlockItem blockItem, boolean inLoop) {
-        if (blockItem.decl != null) visitDecl(blockItem.decl);
-        else visitStmt(blockItem.stmt, inLoop);
-    }
-
-    public void visitBlockItem(BlockItem blockItem, FuncSymbol funcSymbol) {
-        if (blockItem.decl != null) visitDecl(blockItem.decl);
-        else visitStmt(blockItem.stmt, funcSymbol);
+        else visitStmt(blockItem.stmt, funcSymbol, inLoop);
     }
 
     public void visitAssignment(Stmt stmt) {
@@ -244,21 +223,21 @@ public class Visitor {
         if (stmt.exps != null && !stmt.exps.isEmpty()) visitExp(stmt.exps.get(0));
     }
 
-    public void visitIfStmt(Stmt stmt) {
+
+    public void visitIfStmt(Stmt stmt, FuncSymbol funcSymbol, boolean inLoop) {
         visitCond(stmt.cond);
-        visitStmt(stmt.stmts.get(0));
+        visitStmt(stmt.stmts.get(0), funcSymbol, inLoop);
         if (stmt.stmts.size() > 1) {
-            visitStmt(stmt.stmts.get(1));
+            visitStmt(stmt.stmts.get(1), funcSymbol, inLoop);
         }
         //TODO:中间代码生成作业
     }
 
-    public void visitLoop(Stmt stmt) {
-        //TODO:中间代码生成作业 待完善
+    public void visitLoop(Stmt stmt, FuncSymbol funcSymbol) {
         if (stmt.forStmtInit != null) visitForStmt(stmt.forStmtInit);
         if (stmt.cond != null) visitCond(stmt.cond);
         if (stmt.forStmtLoop != null) visitForStmt(stmt.forStmtLoop);
-        visitStmt(stmt.stmts.get(0), true);
+        visitStmt(stmt.stmts.get(0), funcSymbol, true);
     }
 
     public void visitBreak(Stmt stmt, boolean inLoop) {
@@ -341,60 +320,20 @@ public class Visitor {
         }
     }
 
-    public void visitStmt(Stmt stmt) {
+    public void visitStmt(Stmt stmt, FuncSymbol funcSymbol, boolean inLoop) {
         if (stmt.stmtType.equals(Stmt.StmtType.Assignment)) visitAssignment(stmt);
         else if (stmt.stmtType.equals(Stmt.StmtType.Expression)) visitExpressions(stmt);
         else if (stmt.stmtType.equals(Stmt.StmtType.Block)) {
             currentSymbolTable = currentSymbolTable.newTable(fieldCnt);
             fieldCnt++;
-            visitBlock(stmt.block);
+            visitBlock(stmt.block, funcSymbol, inLoop);
             currentSymbolTable = currentSymbolTable.back();
         }
-        else if (stmt.stmtType.equals(Stmt.StmtType.Branch_If)) visitIfStmt(stmt);
-        else if (stmt.stmtType.equals(Stmt.StmtType.Branch_Else)) visitIfStmt(stmt);
-        else if (stmt.stmtType.equals(Stmt.StmtType.Loop_For)) visitLoop(stmt);
-        else if (stmt.stmtType.equals(Stmt.StmtType.Break)) visitBreak(stmt, false);
-        else if (stmt.stmtType.equals(Stmt.StmtType.Continue)) visitContinue(stmt, false);
-        else if (stmt.stmtType.equals(Stmt.StmtType.Return)) visitReturn(stmt, null);
-        else if (stmt.stmtType.equals(Stmt.StmtType.AssignmentInputInt)) visitIntInput(stmt);
-        else if (stmt.stmtType.equals(Stmt.StmtType.AssignmentInputChar)) visitCharInput(stmt);
-        else if (stmt.stmtType.equals(Stmt.StmtType.Print)) visitPrint(stmt);
-    }
-
-    public void visitStmt(Stmt stmt, boolean inLoop) {
-        if (stmt.stmtType.equals(Stmt.StmtType.Assignment)) visitAssignment(stmt);
-        else if (stmt.stmtType.equals(Stmt.StmtType.Expression)) visitExpressions(stmt);
-        else if (stmt.stmtType.equals(Stmt.StmtType.Block)) {
-            currentSymbolTable = currentSymbolTable.newTable(fieldCnt);
-            fieldCnt++;
-            visitBlock(stmt.block, inLoop);
-            currentSymbolTable = currentSymbolTable.back();
-        }
-        else if (stmt.stmtType.equals(Stmt.StmtType.Branch_If)) visitIfStmt(stmt);
-        else if (stmt.stmtType.equals(Stmt.StmtType.Branch_Else)) visitIfStmt(stmt);
-        else if (stmt.stmtType.equals(Stmt.StmtType.Loop_For)) visitLoop(stmt);
+        else if (stmt.stmtType.equals(Stmt.StmtType.Branch_If)) visitIfStmt(stmt, funcSymbol, inLoop);
+        else if (stmt.stmtType.equals(Stmt.StmtType.Branch_Else)) visitIfStmt(stmt, funcSymbol, inLoop);
+        else if (stmt.stmtType.equals(Stmt.StmtType.Loop_For)) visitLoop(stmt, funcSymbol);
         else if (stmt.stmtType.equals(Stmt.StmtType.Break)) visitBreak(stmt, inLoop);
         else if (stmt.stmtType.equals(Stmt.StmtType.Continue)) visitContinue(stmt, inLoop);
-        else if (stmt.stmtType.equals(Stmt.StmtType.Return)) visitReturn(stmt, null);
-        else if (stmt.stmtType.equals(Stmt.StmtType.AssignmentInputInt)) visitIntInput(stmt);
-        else if (stmt.stmtType.equals(Stmt.StmtType.AssignmentInputChar)) visitCharInput(stmt);
-        else if (stmt.stmtType.equals(Stmt.StmtType.Print)) visitPrint(stmt);
-    }
-
-    public void visitStmt(Stmt stmt, FuncSymbol funcSymbol) {
-        if (stmt.stmtType.equals(Stmt.StmtType.Assignment)) visitAssignment(stmt);
-        else if (stmt.stmtType.equals(Stmt.StmtType.Expression)) visitExpressions(stmt);
-        else if (stmt.stmtType.equals(Stmt.StmtType.Block)) {
-            currentSymbolTable = currentSymbolTable.newTable(fieldCnt);
-            fieldCnt++;
-            visitBlock(stmt.block, funcSymbol);
-            currentSymbolTable = currentSymbolTable.back();
-        }
-        else if (stmt.stmtType.equals(Stmt.StmtType.Branch_If)) visitIfStmt(stmt);
-        else if (stmt.stmtType.equals(Stmt.StmtType.Branch_Else)) visitIfStmt(stmt);
-        else if (stmt.stmtType.equals(Stmt.StmtType.Loop_For)) visitLoop(stmt);
-        else if (stmt.stmtType.equals(Stmt.StmtType.Break)) visitBreak(stmt, false);
-        else if (stmt.stmtType.equals(Stmt.StmtType.Continue)) visitContinue(stmt, false);
         else if (stmt.stmtType.equals(Stmt.StmtType.Return)) visitReturn(stmt, funcSymbol);
         else if (stmt.stmtType.equals(Stmt.StmtType.AssignmentInputInt)) visitIntInput(stmt);
         else if (stmt.stmtType.equals(Stmt.StmtType.AssignmentInputChar)) visitCharInput(stmt);
@@ -466,7 +405,7 @@ public class Visitor {
                         boolean fpIsArray = fpType.equals(SymbolType.IntArray) || fpType.equals(SymbolType.CharArray);
                         if (rpType != null
                                 && ((fpIsVar && (rpType.equals(SymbolType.IntArray) || rpType.equals(SymbolType.CharArray)))
-                                || (fpIsArray && (rpType.equals(SymbolType.Int) || rpType.equals(SymbolType.Char)))
+                                || (fpIsArray && !(rpType.equals(SymbolType.IntArray) || rpType.equals(SymbolType.CharArray)))
                                 || (fpType.equals(SymbolType.CharArray) && rpType.equals(SymbolType.IntArray))
                                 || (fpType.equals(SymbolType.IntArray) && rpType.equals(SymbolType.CharArray)))) {
                             //TODO:形实参类型不匹配错误e
