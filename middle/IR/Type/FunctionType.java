@@ -9,6 +9,7 @@ public class FunctionType extends Type {
     public FunctionType(Type returnType) {
         super(TypeID.FunctionTy, returnType.context);
         this.returnType = returnType;
+        this.paramTypes = new ArrayList<>();
     }
 
     public FunctionType(Type returnType, ArrayList<Type> paramTypes) {

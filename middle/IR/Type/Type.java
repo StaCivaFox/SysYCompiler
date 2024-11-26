@@ -26,4 +26,13 @@ public class Type {
         if (!(obj instanceof Type o)) return false;
         return this.typeID.equals(o.typeID);
     }
+
+    @Override
+    public String toString() {
+        if (this.typeID.equals(TypeID.VoidTy)) {
+            return "void";
+        }
+        //unreachable
+        return "";
+    }
 }

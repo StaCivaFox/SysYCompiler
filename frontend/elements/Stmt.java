@@ -36,7 +36,7 @@ public class Stmt extends SyntaxNode {
     public Token returnToken;
     public Token printfToken;
 
-    //TODO:根据需要补充构造函数
+    //根据需要补充构造函数
     public Stmt(StmtType stmtType, LVal lVal, ArrayList<Exp> exps) {
         this.lVal = lVal;
         this.exps = exps;

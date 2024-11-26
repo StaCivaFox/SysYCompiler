@@ -48,9 +48,10 @@ public class Function extends Value {
         StringBuilder sb = new StringBuilder();
         sb.append("declare ").append(functionType.returnType).append(" @").append(name);
         sb.append("(");
-        for (int i = 0; i < functionType.paramTypes.size(); i++) {
-            sb.append(functionType.paramTypes.get(i));
-            if (i != functionType.paramTypes.size() - 1) sb.append(",");
+        for (int i = 0; i < fParams.size(); i++) {
+            sb.append(fParams.get(i).dataType);
+            //sb.append("%").append(SlotTracker.getInstance().getSlot(fParams.get(i)));
+            if (i != fParams.size() - 1) sb.append(", ");
         }
         sb.append(")");
         return sb.toString();

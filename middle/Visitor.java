@@ -7,7 +7,7 @@ import middle.IR.Module;
 import middle.IR.Type.ArrayType;
 import middle.IR.Type.PointerType;
 import middle.IR.Type.Type;
-import org.jetbrains.annotations.NotNull;
+
 import utils.ErrorReporter;
 
 import java.util.ArrayList;
@@ -33,6 +33,7 @@ public class Visitor {
     }
 
     public void visitCompUnit(CompUnit compUnit) {
+        buildDeclare();
         for (Decl decl : compUnit.decls) {
             visitDecl(decl);
         }
@@ -112,7 +113,7 @@ public class Visitor {
                 } else {
                     symbolType = SymbolType.ConstCharArray;
                     //计算数组长度
-                    Constant arrayLength= (Constant) visitConstExp(constDef.constExps.get(0));
+                    Constant arrayLength = (Constant) visitConstExp(constDef.constExps.get(0));
                     //为数组分配空间
                     arrayType =
                             currentModule.context.getArrayType(currentModule.context.getInt8Ty(), arrayLength.getIntValue());
@@ -658,6 +659,10 @@ public class Visitor {
             //无return错误g
             ErrorReporter.getInstance().addError(funcDef.endLine, "g");
         }
+        //没有返回语句的，需要补上一句；出现在void函数中；否则，如果不是void函数且没有返回值，则会报g类错误
+        if (funcDef.funcType.type.equals("void") && !funcDef.hasReturn()) {
+            currentBasicBlock.addInstruction(new ReturnInst(currentModule.context.getVoidTy()));
+        }
         currentSymbolTable = currentSymbolTable.back();
         currentBasicBlock = null;
         currentFunction = null;
@@ -709,9 +714,17 @@ public class Visitor {
             return;
         }
         //通过identSymbol.value在内存中定位对象，对Exp求值，并赋值
-        Value value = visitExp(stmt.exps.get(0));
-        Instruction storeInst = new StoreInst(value, addr);
-        currentBasicBlock.addInstruction(storeInst);
+        //类型转换
+        Value value = visitExp(stmt.exps.get(0));   //i32
+        if (identSymbol != null && identSymbol.type.equals(SymbolType.Char)) {
+            Value truncedValue = trunc(value);
+            Instruction storeInst = new StoreInst(truncedValue, addr);
+            currentBasicBlock.addInstruction(storeInst);
+        }
+        else {
+            Instruction storeInst = new StoreInst(value, addr);
+            currentBasicBlock.addInstruction(storeInst);
+        }
     }
 
     public void visitExpressions(Stmt stmt) {
@@ -756,6 +769,11 @@ public class Visitor {
         if (stmt.exps.isEmpty()) {
             retInst = new ReturnInst(currentModule.context.getVoidTy());
         }
+        else if (funcSymbol != null && funcSymbol.type.equals(SymbolType.CharFunc)) {
+            Value retRes = visitExp(stmt.exps.get(0));
+            Value truncedValue = trunc(retRes);
+            retInst = new ReturnInst(truncedValue.dataType, truncedValue);
+        }
         else {
             Value retRes = visitExp(stmt.exps.get(0));
             retInst = new ReturnInst(retRes.dataType, retRes);
@@ -774,27 +792,37 @@ public class Visitor {
     }
 
     public void visitIntInput(Stmt stmt) {
-        visitLVal(stmt.lVal);
+        Value addr = visitLVal(stmt.lVal);
         Symbol identSymbol = currentSymbolTable.getSymbol(stmt.lVal.ident.name());
         if (identSymbol != null && (identSymbol.type.equals(SymbolType.ConstInt) || identSymbol.type.equals(SymbolType.ConstChar)
                 || identSymbol.type.equals(SymbolType.ConstIntArray) || identSymbol.type.equals(SymbolType.ConstCharArray))) {
-            //TODO:对常量赋值错误h
+            //对常量赋值错误h
             ErrorReporter.getInstance().addError(stmt.lVal.ident.lineno(), "h");
             return;
         }
-        //TODO:中间代码生成作业
+        Function getInt = (Function) currentSymbolTable.getSymbol("getint").value;
+        Instruction callInst = new CallInst(getInt, new ArrayList<>());
+        currentBasicBlock.addInstruction(callInst);
+        Instruction storeInst = new StoreInst(callInst, addr);
+        currentBasicBlock.addInstruction(storeInst);
     }
 
     public void visitCharInput(Stmt stmt) {
-        visitLVal(stmt.lVal);
+        Value addr = visitLVal(stmt.lVal);
         Symbol identSymbol = currentSymbolTable.getSymbol(stmt.lVal.ident.name());
         if (identSymbol != null && (identSymbol.type.equals(SymbolType.ConstInt) || identSymbol.type.equals(SymbolType.ConstChar)
                 || identSymbol.type.equals(SymbolType.ConstIntArray) || identSymbol.type.equals(SymbolType.ConstCharArray))) {
-            //TODO:对常量赋值错误h
+            //对常量赋值错误h
             ErrorReporter.getInstance().addError(stmt.lVal.ident.lineno(), "h");
             return;
         }
-        //TODO:中间代码生成作业
+        Function getChar = (Function) currentSymbolTable.getSymbol("getchar").value;
+        Instruction callInst = new CallInst(getChar, new ArrayList<>());
+        currentBasicBlock.addInstruction(callInst);
+        //类型转换
+        Value truncedValue = trunc(callInst);
+        Instruction storeInst = new StoreInst(truncedValue, addr);
+        currentBasicBlock.addInstruction(storeInst);
     }
 
     public void visitPrint(Stmt stmt) {
@@ -803,9 +831,60 @@ public class Visitor {
             ErrorReporter.getInstance().addError(stmt.printfToken.getLineno(), "l");
             return;
         }
+        String format = stmt.stringConst.token.getContent();
+        //去掉双引号
+        format = format.substring(1, format.length() - 1);
+        Function putInt = (Function) currentSymbolTable.getSymbol("putint").value;
+        Function putCh = (Function) currentSymbolTable.getSymbol("putch").value;
+        Function putStr = (Function) currentSymbolTable.getSymbol("putstr").value;
+
+        ArrayList<Value> printExps = new ArrayList<>();
         for (Exp exp : stmt.exps) {
-            visitExp(exp);
+            printExps.add(visitExp(exp));
         }
+
+        //magical regex
+        String[] printStrings = format.split("(?<=%d|%c)|(?=%d|%c)");
+        int expIndex = 0;
+        for (String str : printStrings) {
+            if ("%d".equals(str)) {
+                ArrayList<Value> putIntInstParams = new ArrayList<>();
+                putIntInstParams.add(printExps.get(expIndex));
+                Instruction putIntInst = new CallInst(putInt, putIntInstParams);
+                currentBasicBlock.addInstruction(putIntInst);
+                expIndex++;
+            }
+            else if ("%c".equals(str)) {
+                ArrayList<Value> putChInstParams = new ArrayList<>();
+                Value zextedValue = zext(printExps.get(expIndex));
+                putChInstParams.add(zextedValue);
+                Instruction putChInst = new CallInst(putCh, putChInstParams);
+                currentBasicBlock.addInstruction(putChInst);
+                expIndex++;
+            }
+            else {
+                //构造全局字面量
+                //获取字符串长度；注意最后需要补一个0
+                stringConstCnt++;
+                str = str + "0";
+                Constant stringLength = new Constant(currentModule.context.getInt32Ty(), String.valueOf(calcStringConstLength(str)));
+                //构造全局字面量
+                ArrayType arrayType = currentModule.context.getArrayType(currentModule.context.getInt8Ty(), stringLength.getIntValue());
+                Constant stringConstant = new Constant(arrayType, str);
+                ArrayList<Value> stringLiteralInit = new ArrayList<>();
+                stringLiteralInit.add(stringConstant);
+                GlobalVariable stringLiteral = new GlobalVariable(".str." + stringConstCnt, currentModule.context.getPointerType(arrayType), stringLiteralInit, true, true);
+                currentModule.addGlobalVariable(stringLiteral);
+                //调用putstr
+                ArrayList<Value> putStrInstParams = new ArrayList<>();
+                Instruction getElementPtr = new GetElementPtr(stringLiteral, new Constant(currentModule.context.getInt32Ty(), "0"));
+                currentBasicBlock.addInstruction(getElementPtr);
+                putStrInstParams.add(getElementPtr);
+                Instruction callInst = new CallInst(putStr, putStrInstParams);
+                currentBasicBlock.addInstruction(callInst);
+            }
+        }
+
     }
 
     //返回符号表中lVal对应的symbol的value（即它的地址），相当于“找到该左值定位的对象”
@@ -968,7 +1047,7 @@ public class Visitor {
         return length;
     }
 
-    @NotNull
+
     private Function buildFunction(FuncSymbol funcSymbol, ArrayList<Argument> arguments) {
         Type returnType;
         switch (funcSymbol.type) {
@@ -984,6 +1063,45 @@ public class Visitor {
             function = new Function(returnType, funcSymbol.name, arguments, currentModule);
         }
         return function;
+    }
+
+    private void buildDeclare() {
+        Function getInt = new Function(currentModule.context.getInt32Ty(), "getint", currentModule);
+        getInt.setNotDefine();
+        currentModule.addFunction(getInt);
+        currentSymbolTable.addSymbol(new FuncSymbol(currentSymbolTable.id, "getint", 0, SymbolType.IntFunc, getInt, 0, new ArrayList<>()));
+
+        Function getChar = new Function(currentModule.context.getInt32Ty(), "getchar", currentModule);
+        getChar.setNotDefine();
+        currentModule.addFunction(getChar);
+        currentSymbolTable.addSymbol(new FuncSymbol(currentSymbolTable.id, "getchar", 0, SymbolType.IntFunc, getChar, 0, new ArrayList<>()));
+
+        ArrayList<Argument> putIntArgs = new ArrayList<>();
+        putIntArgs.add(new Argument("putIntDeclare", currentModule.context.getInt32Ty()));
+        Function putInt = new Function(currentModule.context.getVoidTy(), "putint", putIntArgs, currentModule);
+        putInt.setNotDefine();
+        currentModule.addFunction(putInt);
+        ArrayList<Symbol> putIntFParamList = new ArrayList<>();
+        putIntFParamList.add(new VariableSymbol(currentSymbolTable.id, "putIntDeclare", 0, SymbolType.Int, "int", null));
+        currentSymbolTable.addSymbol(new FuncSymbol(currentSymbolTable.id, "putint", 0, SymbolType.VoidFunc, putInt, 1, putIntFParamList));
+
+        ArrayList<Argument> putCharArgs = new ArrayList<>();
+        putCharArgs.add(new Argument("putCharDeclare", currentModule.context.getInt32Ty()));
+        Function putChar = new Function(currentModule.context.getVoidTy(), "putch", putCharArgs, currentModule);
+        putChar.setNotDefine();
+        currentModule.addFunction(putChar);
+        ArrayList<Symbol> putCharFParamList = new ArrayList<>();
+        putCharFParamList.add(new VariableSymbol(currentSymbolTable.id, "putCharDeclare", 0, SymbolType.Int, "int", null));
+        currentSymbolTable.addSymbol(new FuncSymbol(currentSymbolTable.id, "putch", 0, SymbolType.VoidFunc, putChar, 1, putCharFParamList));
+
+        ArrayList<Argument> putStrArgs = new ArrayList<>();
+        putStrArgs.add(new Argument("putStrDeclare", currentModule.context.getPointerType(currentModule.context.getInt8Ty())));
+        Function putStr = new Function(currentModule.context.getVoidTy(), "putstr", putStrArgs, currentModule);
+        putStr.setNotDefine();
+        currentModule.addFunction(putStr);
+        ArrayList<Symbol> putStrFParamList = new ArrayList<>();
+        putStrFParamList.add(new VariableSymbol(currentSymbolTable.id, "putStrDeclare", 0, SymbolType.CharArray, "char", null));
+        currentSymbolTable.addSymbol(new FuncSymbol(currentSymbolTable.id, "putstr", 0, SymbolType.VoidFunc, putStr, 1, putStrFParamList));
     }
 
     /********** help functions end **********/

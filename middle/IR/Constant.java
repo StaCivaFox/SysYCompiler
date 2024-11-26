@@ -73,4 +73,9 @@ public class Constant extends Value {
                 this.getIntValue();
     }
 
+    @Override
+    public String getVirtualReg() {
+        return String.valueOf(this.getIntValue());
+    }
+
 }

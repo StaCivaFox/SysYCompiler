@@ -14,6 +14,7 @@ public class GlobalVariable extends Value {
     public boolean isConst;
 
     //通过传入的Type dataType区分数组还是普通变量
+    //重要！！传入的dataType一定是一个指针！！！（因为GlobalVariable的返回值是一个地址）
     public GlobalVariable(String name, Type dataType, ArrayList<Value> init,
                           boolean isPrivate, boolean isConst) {
         super(name, ValueType.GlobalVariableVTy, dataType);
@@ -31,7 +32,13 @@ public class GlobalVariable extends Value {
         //全局常量
         if (isConst) {
             Type refType = ((PointerType) dataType).refType;
-            String tmp = String.format("@%s = dso_local constant %s", name, refType);
+            String tmp;
+            if (!isPrivate) {
+                tmp = String.format("@%s = dso_local constant %s", name, refType);
+            }
+            else {
+                tmp = String.format("@%s = private unnamed_addr constant %s", name, refType);
+            }
             StringBuilder sb = new StringBuilder(tmp);
             //生成初值；常量一定有初值
             if (refType instanceof IntegerType) {

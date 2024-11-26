@@ -16,7 +16,7 @@ public class ReturnInst extends Instruction {
         retType.context.saveValue(this);
     }
 
-    //ret i32 0
+    //ret i32 0 ret i8 0
     public ReturnInst(Type retType, Value retValue) {
         super(retType);
         //this.retType = retType;
