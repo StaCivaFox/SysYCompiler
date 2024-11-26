@@ -40,6 +40,14 @@ public class PrimaryExp extends SyntaxNode {
         else return SymbolType.Char;
     }
 
+    public String getNumber() {
+        return this.number.intConst.token.getContent();
+    }
+
+    public String getCharacter() {
+        return this.character.charConst.token.getContent();
+    }
+
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();

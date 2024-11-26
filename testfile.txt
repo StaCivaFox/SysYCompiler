@@ -1,17 +1,8 @@
-char func1(char b[]) {
-    return 'c';
-}
 
-int func2(char c) {
-    return 1;
-}
 
-int func3(int a) {
-    return a;
-}
+int d[5] = {1, 2, 3, 4, 5};
 
-int main(){
-    char b[6];
-    func3( func2( func1(b[0]) ) );
+int main() {
+    d[3] = 10;
     return 0;
 }

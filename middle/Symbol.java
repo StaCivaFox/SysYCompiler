@@ -1,12 +1,14 @@
 package middle;
 
+import middle.IR.Value;
+
 public class Symbol {
     public int tableId;
     public String name;
     public int lineno;
     public SymbolType type;
     public String bType;       //int/char
-    //TODO:用于中间代码生成
+    //用于中间代码生成
     public Value value;
 
     public Symbol(int tableId, String name, int lineno,

@@ -1,5 +1,7 @@
 package middle;
 
+import middle.IR.Value;
+
 public class VariableSymbol extends Symbol {
     public VariableSymbol(int tableId, String name, int lineno,
                           SymbolType type, String bType, Value value) {

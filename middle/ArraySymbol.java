@@ -1,5 +1,7 @@
 package middle;
 
+import middle.IR.Value;
+
 public class ArraySymbol extends Symbol {
     public int dim;        //无必要，因为实验要求中只有一维数组）））
 

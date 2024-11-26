@@ -3,6 +3,7 @@ import frontend.Parser;
 import frontend.Token;
 import frontend.TokenType;
 import frontend.elements.CompUnit;
+import middle.IR.Module;
 import middle.Visitor;
 import utils.ErrorReporter;
 
@@ -48,13 +49,24 @@ public class Compiler {
         CompUnit compUnit = parser.parseCompUnit();
 
         //语义分析作业输出代码
-        String symbolOutputPath = "symbol.txt";
+        /*String symbolOutputPath = "symbol.txt";
         Visitor visitor = new Visitor(compUnit);
         visitor.visitCompUnit(compUnit);
         Files.write(Paths.get(symbolOutputPath), visitor.currentSymbolTable.toString().getBytes(),
                 StandardOpenOption.APPEND, StandardOpenOption.CREATE);
         if (ErrorReporter.getInstance().hasError()) {
             ErrorReporter.getInstance().printError();
+        }*/
+        //中间代码生成
+        String llvmOutputPath = "llvm_ir.txt";
+        Visitor visitor = new Visitor(compUnit);
+        visitor.visitCompUnit(compUnit);
+        Module irModule = visitor.currentModule;
+        if (ErrorReporter.getInstance().hasError()) {
+            ErrorReporter.getInstance().printError();
+            return;
         }
+        Files.write(Paths.get(llvmOutputPath), irModule.toString().getBytes(),
+                StandardOpenOption.APPEND, StandardOpenOption.CREATE);
     }
 }
