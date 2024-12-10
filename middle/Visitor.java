@@ -11,6 +11,8 @@ import middle.IR.Type.Type;
 import utils.ErrorReporter;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Stack;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -24,6 +26,17 @@ public class Visitor {
     public Module currentModule = new Module("Top");
     public Function currentFunction = null;
     public BasicBlock currentBasicBlock = null;
+
+    public static class LoopBlocks {
+        public BasicBlock forStmt2Block;
+        public BasicBlock outBlock;
+        public LoopBlocks(BasicBlock forStmt2Block, BasicBlock outBlock) {
+            this.forStmt2Block = forStmt2Block;
+            this.outBlock = outBlock;
+        }
+    }
+
+    public Stack<LoopBlocks> currentLoop = new Stack<>();
     public int stringConstCnt = 0;
 
     public Visitor(CompUnit compUnit) {
@@ -82,7 +95,7 @@ public class Visitor {
                 currentBasicBlock.addInstruction(allocaInst);
                 //有初值，则去计算初值，并生成store指令；注意计算指令已经在visitConstExp过程中完成插入了
                 if (constDef.constInitVal.constExps != null && !constDef.constInitVal.constExps.isEmpty()) {
-                    Constant constInitVal = (Constant) visitConstExp(constDef.constInitVal.constExps.get(0));
+                    Value constInitVal = visitConstExp(constDef.constInitVal.constExps.get(0));
                     //返回的结果是i32，需要进行类型转换
                     if (symbolType.equals(SymbolType.ConstInt)) {
                         Instruction storeInst = new StoreInst(constInitVal, allocaInst);
@@ -138,24 +151,26 @@ public class Visitor {
                     strInitval = strInitval.substring(1, strInitval.length() - 1);
                     //末尾补0
                     if (calcStringConstLength(strInitval) < arrayType.size) {
-                        strInitval = strInitval + "0".repeat(Math.max(0, (arrayType.size - calcStringConstLength(strInitval))));
+                        strInitval = strInitval + ("\\" + "0").repeat(Math.max(0, (arrayType.size - calcStringConstLength(strInitval))));
                     }
+                    int pos = 0;
                     for (int i = 0; i < calcStringConstLength(strInitval); i++) {
                         Instruction getElementPtr =
-                                new GetElementPtr(allocaInst, new Constant(currentModule.context.getInt32Ty(), String.valueOf(i)));
+                                new GetElementPtr(allocaInst, new Constant(currentModule.context.getInt32Ty(), String.valueOf(pos)));
                         currentBasicBlock.addInstruction(getElementPtr);
                         Constant ithChar;
                         if (strInitval.charAt(i) == '\\') {
-                            String escapeChar = String.valueOf(strInitval.charAt(i) + strInitval.charAt(i + 1));
+                            String escapeChar = String.valueOf(strInitval.charAt(i)) + strInitval.charAt(i + 1);
                             ithChar = new Constant(currentModule.context.getInt8Ty(), escapeChar);
                             i++;
                         }
                         else {
-                            ithChar = new Constant(currentModule.context.getInt8Ty(), String.valueOf(strInitval.charAt(i)));
+                            ithChar = new Constant(currentModule.context.getInt8Ty(), String.valueOf((int) strInitval.charAt(i)));
                         }
                         Instruction storeInst =
                                 new StoreInst(ithChar, getElementPtr);
                         currentBasicBlock.addInstruction(storeInst);
+                        pos++;
                     }
                 }
                 else {
@@ -165,10 +180,10 @@ public class Visitor {
                         currentBasicBlock.addInstruction(getElementPtr);
                         //注意类型转换
                         if (symbolType.equals(SymbolType.ConstIntArray)) {
-                            Instruction storeInst = new StoreInst((Constant) visitConstExp(constDef.constInitVal.constExps.get(i)), getElementPtr);
+                            Instruction storeInst = new StoreInst(visitConstExp(constDef.constInitVal.constExps.get(i)), getElementPtr);
                             currentBasicBlock.addInstruction(storeInst);
                         } else {
-                            Constant constInitVal = (Constant) visitConstExp(constDef.constInitVal.constExps.get(i));
+                            Value constInitVal = visitConstExp(constDef.constInitVal.constExps.get(i));
                             //Instruction truncInst = new TruncInst(constInitVal, currentModule.context.getInt8Ty());
                             Value truncedValue = trunc(constInitVal);
                             Instruction storeInst = new StoreInst(truncedValue, getElementPtr);
@@ -269,7 +284,7 @@ public class Visitor {
                         strInitval = strInitval.substring(1, strInitval.length() - 1);
                         //末尾补0
                         if (calcStringConstLength(strInitval) < arrayType.size) {
-                            strInitval = strInitval + "0".repeat(Math.max(0, (arrayType.size - calcStringConstLength(strInitval))));
+                            strInitval = strInitval + ("\\" + "0").repeat(Math.max(0, (arrayType.size - calcStringConstLength(strInitval))));
                         }
                         Constant globalVariableInit = new Constant(arrayType, strInitval);
                         globalVariableInits.add(globalVariableInit);
@@ -388,24 +403,26 @@ public class Visitor {
                         strInitval = strInitval.substring(1, strInitval.length() - 1);
                         //末尾补0
                         if (calcStringConstLength(strInitval) < arrayType.size) {
-                            strInitval = strInitval + "0".repeat(Math.max(0, (arrayType.size - calcStringConstLength(strInitval))));
+                            strInitval = strInitval + ("\\" + "0").repeat(Math.max(0, (arrayType.size - calcStringConstLength(strInitval))));
                         }
+                        int pos = 0;
                         for (int i = 0; i < calcStringConstLength(strInitval); i++) {
                             Instruction getElementPtr =
-                                    new GetElementPtr(allocaInst, new Constant(currentModule.context.getInt32Ty(), String.valueOf(i)));
+                                    new GetElementPtr(allocaInst, new Constant(currentModule.context.getInt32Ty(), String.valueOf(pos)));
                             currentBasicBlock.addInstruction(getElementPtr);
                             Constant ithChar;
                             if (strInitval.charAt(i) == '\\') {
-                                String escapeChar = String.valueOf(strInitval.charAt(i) + strInitval.charAt(i + 1));
+                                String escapeChar = String.valueOf(strInitval.charAt(i)) + strInitval.charAt(i + 1);
                                 ithChar = new Constant(currentModule.context.getInt8Ty(), escapeChar);
                                 i++;
                             }
                             else {
-                                ithChar = new Constant(currentModule.context.getInt8Ty(), String.valueOf(strInitval.charAt(i)));
+                                ithChar = new Constant(currentModule.context.getInt8Ty(), String.valueOf((int)strInitval.charAt(i)));
                             }
                             Instruction storeInst =
                                     new StoreInst(ithChar, getElementPtr);
                             currentBasicBlock.addInstruction(storeInst);
+                            pos++;
                         }
                     }
                     else {
@@ -533,7 +550,7 @@ public class Visitor {
                             strInitval = strInitval.substring(1, strInitval.length() - 1);
                             //末尾补0
                             if (calcStringConstLength(strInitval) < arrayType.size) {
-                                strInitval = strInitval + "0".repeat(Math.max(0, (arrayType.size - calcStringConstLength(strInitval))));
+                                strInitval = strInitval + ("\\" + "0").repeat(Math.max(0, (arrayType.size - calcStringConstLength(strInitval))));
                             }
                             Constant globalVariableInit = new Constant(arrayType, strInitval);
                             globalVariableInits.add(globalVariableInit);
@@ -661,7 +678,7 @@ public class Visitor {
         }
         //没有返回语句的，需要补上一句；出现在void函数中；否则，如果不是void函数且没有返回值，则会报g类错误
         if (funcDef.funcType.type.equals("void") && !funcDef.hasReturn()) {
-            currentBasicBlock.addInstruction(new ReturnInst(currentModule.context.getVoidTy()));
+            currentBasicBlock.setTerminator(new ReturnInst(currentModule.context.getVoidTy()));
         }
         currentSymbolTable = currentSymbolTable.back();
         currentBasicBlock = null;
@@ -716,7 +733,7 @@ public class Visitor {
         //通过identSymbol.value在内存中定位对象，对Exp求值，并赋值
         //类型转换
         Value value = visitExp(stmt.exps.get(0));   //i32
-        if (identSymbol != null && identSymbol.type.equals(SymbolType.Char)) {
+        if (identSymbol != null && identSymbol.bType.equals("char")) {
             Value truncedValue = trunc(value);
             Instruction storeInst = new StoreInst(truncedValue, addr);
             currentBasicBlock.addInstruction(storeInst);
@@ -733,35 +750,100 @@ public class Visitor {
 
 
     public void visitIfStmt(Stmt stmt, FuncSymbol funcSymbol, boolean inLoop) {
-        visitCond(stmt.cond);
-        visitStmt(stmt.stmts.get(0), funcSymbol, inLoop);
-        if (stmt.stmts.size() > 1) {
-            visitStmt(stmt.stmts.get(1), funcSymbol, inLoop);
+        BasicBlock condCalcBlock = new BasicBlock(currentFunction);
+        BasicBlock trueBlock = new BasicBlock(currentFunction);
+        BasicBlock outBlock = new BasicBlock(currentFunction);
+        BasicBlock falseBlock;
+        if (stmt.stmtType.equals(Stmt.StmtType.Branch_Else)) {
+            falseBlock = new BasicBlock(currentFunction);
         }
-        //TODO:中间代码生成作业
+        else {
+            falseBlock = outBlock;
+        }
+        //跳转到cond计算的基本块
+        Instruction branchToCond = new BranchInst(condCalcBlock);
+        currentBasicBlock.setTerminator(branchToCond);
+        visitCond(stmt.cond, trueBlock, falseBlock, condCalcBlock);
+        //进入if执行体，生成代码
+        currentFunction.addBasicBlock(trueBlock);
+        currentBasicBlock = trueBlock;
+        visitStmt(stmt.stmts.get(0), funcSymbol, inLoop);
+        //最后无条件跳转到出口
+        Instruction branchOutInst = new BranchInst(outBlock);
+        currentBasicBlock.setTerminator(branchOutInst);
+        //进入else执行体，生成代码
+        if (stmt.stmtType.equals(Stmt.StmtType.Branch_Else)) {
+            currentFunction.addBasicBlock(falseBlock);
+            currentBasicBlock = falseBlock;
+            visitStmt(stmt.stmts.get(1), funcSymbol, inLoop);
+            //最后无条件跳转到出口
+            Instruction branchOutInst2 = new BranchInst(outBlock);
+            currentBasicBlock.setTerminator(branchOutInst2);
+        }
+        //进入出口基本块
+        currentBasicBlock = outBlock;
+        currentFunction.addBasicBlock(outBlock);
     }
 
     public void visitLoop(Stmt stmt, FuncSymbol funcSymbol) {
+        //新建各基本块
+        BasicBlock condCalcBlock = new BasicBlock(currentFunction);
+        BasicBlock trueBlock = new BasicBlock(currentFunction);
+        BasicBlock outBlock = new BasicBlock(currentFunction);
+        BasicBlock forStmt2Block = new BasicBlock(currentFunction);
+        //将当前循环压栈
+        currentLoop.push(new LoopBlocks(forStmt2Block, outBlock));
+        //如果有ForStmt1，在当前基本块生成ForStmt1的代码
         if (stmt.forStmtInit != null) visitForStmt(stmt.forStmtInit);
-        if (stmt.cond != null) visitCond(stmt.cond);
-        if (stmt.forStmtLoop != null) visitForStmt(stmt.forStmtLoop);
+        //插入一条br指令，表示无条件跳转到计算cond的基本块
+        if (stmt.cond != null) {
+            currentBasicBlock.setTerminator(new BranchInst(condCalcBlock));
+        }
+        else {
+            currentBasicBlock.setTerminator(new BranchInst(trueBlock));
+        }
+        //visitCond
+        if (stmt.cond != null) visitCond(stmt.cond, trueBlock, outBlock, condCalcBlock);
+        //进入循环体基本块trueBlock，生成代码
+        currentFunction.addBasicBlock(trueBlock);
+        currentBasicBlock = trueBlock;
         visitStmt(stmt.stmts.get(0), funcSymbol, true);
+        //在当前基本块插入一条br指令，表示无条件跳转到计算ForStmt2的基本块
+        currentBasicBlock.setTerminator(new BranchInst(forStmt2Block));
+        //进入ForStmt2的基本块（不管有没有ForStmt2）
+        currentFunction.addBasicBlock(forStmt2Block);
+        currentBasicBlock = forStmt2Block;
+        //如果有ForStmt2，就visit
+        if (stmt.forStmtLoop != null) visitForStmt(stmt.forStmtLoop);
+        //在当前基本块（即ForStmt2所在的基本块）插入一条br指令，表明无条件跳转到计算cond的基本块
+        if (stmt.cond != null) {
+            currentBasicBlock.setTerminator(new BranchInst(condCalcBlock));
+        }
+        else {
+            currentBasicBlock.setTerminator(new BranchInst(trueBlock));
+        }
+        //将当前循环出栈，并进入出口基本块
+        currentLoop.pop();
+        currentFunction.addBasicBlock(outBlock);
+        currentBasicBlock = outBlock;
     }
 
     public void visitBreak(Stmt stmt, boolean inLoop) {
         if (!inLoop) {
-            //TODO:非循环块中出现break错误m
+            //非循环块中出现break错误m
             ErrorReporter.getInstance().addError(stmt.breakToken.getLineno(), "m");
             return;
         }
+        currentBasicBlock.setTerminator(new BranchInst(currentLoop.peek().outBlock));
     }
 
     public void visitContinue(Stmt stmt, boolean inLoop) {
         if (!inLoop) {
-            //TODO:非循环块中出现continue错误m
+            //非循环块中出现continue错误m
             ErrorReporter.getInstance().addError(stmt.continueToken.getLineno(), "m");
             return;
         }
+        currentBasicBlock.setTerminator(new BranchInst(currentLoop.peek().forStmt2Block));
     }
 
     public void visitReturn(Stmt stmt, FuncSymbol funcSymbol) {
@@ -780,7 +862,7 @@ public class Visitor {
         }
         //main函数
         if (funcSymbol == null) {
-            currentBasicBlock.addInstruction(retInst);
+            currentBasicBlock.setTerminator(retInst);
             return;
         }
         if (funcSymbol.type.equals(SymbolType.VoidFunc) && !stmt.exps.isEmpty()) {
@@ -788,7 +870,7 @@ public class Visitor {
             ErrorReporter.getInstance().addError(stmt.returnToken.getLineno(), "f");
             return;
         }
-        currentBasicBlock.addInstruction(retInst);
+        currentBasicBlock.setTerminator(retInst);
     }
 
     public void visitIntInput(Stmt stmt) {
@@ -866,7 +948,7 @@ public class Visitor {
                 //构造全局字面量
                 //获取字符串长度；注意最后需要补一个0
                 stringConstCnt++;
-                str = str + "0";
+                str = str + "\\" + "0";
                 Constant stringLength = new Constant(currentModule.context.getInt32Ty(), String.valueOf(calcStringConstLength(str)));
                 //构造全局字面量
                 ArrayType arrayType = currentModule.context.getArrayType(currentModule.context.getInt8Ty(), stringLength.getIntValue());
@@ -905,7 +987,15 @@ public class Visitor {
             //没有对数组索引，则返回数组首元素的地址
             Instruction getElementPtr;
             if (lVal.exps == null || lVal.exps.isEmpty()) {
-                getElementPtr = new GetElementPtr(value, new Constant(currentModule.context.getInt32Ty(), "0"));
+                //数组symbol的value一定是一个指针；如果它的refType也是一个指针，则需要先load出来，获取数组的基地址
+                if (((PointerType) value.dataType).refType instanceof PointerType) {
+                    Instruction loadInst = new LoadInst(value);
+                    currentBasicBlock.addInstruction(loadInst);
+                    getElementPtr = new GetElementPtr(loadInst, new Constant(currentModule.context.getInt32Ty(), "0"));
+                }
+                else {
+                    getElementPtr = new GetElementPtr(value, new Constant(currentModule.context.getInt32Ty(), "0"));
+                }
             }
             //否则，获取对应的索引地址
             else {
@@ -949,20 +1039,30 @@ public class Visitor {
     }
 
     public void visitForStmt(ForStmt forStmt) {
-        visitLVal(forStmt.lVal);
+        Value addr = visitLVal(forStmt.lVal);
         Symbol identSymbol = currentSymbolTable.getSymbol(forStmt.lVal.ident.name());
         if (identSymbol != null && (identSymbol.type.equals(SymbolType.ConstInt) || identSymbol.type.equals(SymbolType.ConstChar)
                 || identSymbol.type.equals(SymbolType.ConstIntArray) || identSymbol.type.equals(SymbolType.ConstCharArray))) {
-            //TODO:对常量赋值错误h
+            //对常量赋值错误h
             ErrorReporter.getInstance().addError(forStmt.lVal.ident.lineno(), "h");
             return;
         }
-        //TODO:中间代码生成作业
+        Value value = visitExp(forStmt.exp);
+        if (identSymbol != null && identSymbol.bType.equals("char")) {
+            Value truncedValue = trunc(value);
+            Instruction storeInst = new StoreInst(truncedValue, addr);
+            currentBasicBlock.addInstruction(storeInst);
+        }
+        else {
+            Instruction storeInst = new StoreInst(value, addr);
+            currentBasicBlock.addInstruction(storeInst);
+        }
     }
 
     /********** help functions **********/
     public Value zext(Value value) {
-        if (!value.dataType.equals(currentModule.context.getInt32Ty())) {
+        if (value.dataType.equals(currentModule.context.getInt1Ty())
+                || value.dataType.equals(currentModule.context.getInt8Ty())) {
             //如果是常数，直接计算出结果
             if (value instanceof Constant) {
                 return new Constant(currentModule.context.getInt32Ty(), ((Constant) value).constantData);
@@ -1110,8 +1210,8 @@ public class Visitor {
         return visitAddExp(exp.addExp);
     }
 
-    public void visitCond(Cond cond) {
-        visitLOrExp(cond.lOrExp);
+    public void visitCond(Cond cond, BasicBlock trueBlock, BasicBlock falseBlock, BasicBlock curCalcBlock) {
+        visitLOrExp(cond.lOrExp, trueBlock, falseBlock, curCalcBlock);
     }
 
     public Value visitAddExp(AddExp addExp) {
@@ -1165,8 +1265,19 @@ public class Visitor {
                     }
                     //获得实参列表
                     ArrayList<Value> arguments = new ArrayList<>();
-                    for (Exp exp : unaryExp.funcRParams.exps) {
+                    /*for (Exp exp : unaryExp.funcRParams.exps) {
                         arguments.add(visitExp(exp));
+                    }*/
+                    for (int i = 0; i < funcIdentSymbol.fParamCnt; i++) {
+                        String fpBType = funcIdentSymbol.fParamList.get(i).bType;
+                        Value expValue = visitExp(unaryExp.funcRParams.exps.get(i));    //i32
+                        if ("char".equals(fpBType) && expValue.dataType.equals(currentModule.context.getInt32Ty())) {
+                            Value truncedValue = trunc(expValue);
+                            arguments.add(truncedValue);
+                        }
+                        else {
+                            arguments.add(expValue);
+                        }
                     }
                     //历史遗留，暂时不动，用不了再说
                     for (int i = 0; i < funcIdentSymbol.fParamCnt; i++) {
@@ -1190,8 +1301,9 @@ public class Visitor {
                     //生成call指令
                     Instruction callInst = new CallInst(function, arguments);
                     currentBasicBlock.addInstruction(callInst);
+                    //类型转换；表达式的每层计算结果都应该是i32
                     //返回call指令的实例，可以理解为该unaryExp的计算结果是函数调用的返回值
-                    return callInst;
+                    return zext(callInst);
                 }
                 //如果调用语句没传入实参
                 else {
@@ -1206,8 +1318,9 @@ public class Visitor {
                     //生成call指令
                     Instruction callInst = new CallInst(function, new ArrayList<>()/*空实参表*/);
                     currentBasicBlock.addInstruction(callInst);
+                    //类型转换；表达式的每层计算结果都应该是i32
                     //返回call指令的实例，可以理解为该unaryExp的计算结果是函数调用的返回值
-                    return callInst;
+                    return zext(callInst);
                 }
             }
             //unreachable code
@@ -1248,11 +1361,18 @@ public class Visitor {
             if (identSymbol instanceof ArraySymbol && (primaryExp.lVal.exps == null || primaryExp.lVal.exps.isEmpty())) {
                 return lValAddr;
             }
+            //非常特殊的情况：全局变量初始化时的constExp中，直接返回const左值定位的全局变量的值
+            else if (currentSymbolTable.fatherTable == null
+                    && (identSymbol.type.equals(SymbolType.ConstInt) || (identSymbol.type.equals(SymbolType.ConstChar)))) {
+                GlobalVariable globalVariable = (GlobalVariable) identSymbol.value;
+                return (Constant) globalVariable.init.get(0);
+            }
             //否则，evaluate是取出该左值定位的对象的值，即生成和返回一条load指令实例
             else {
                 Instruction loadInst = new LoadInst(lValAddr);
                 currentBasicBlock.addInstruction(loadInst);
-                return loadInst;
+                //类型转换；每层表达式返回的都应该是i32
+                return zext(loadInst);
             }
         }
         else if (primaryExp.number != null) {
@@ -1260,38 +1380,103 @@ public class Visitor {
         }
         else {
             //但凡是表达式，计算结果的返回值都是i32；常数的类型也都是i32。如果需要截断，则是在赋值时进行截断。
-            return new Constant(currentModule.context.getInt32Ty(), primaryExp.getCharacter());
+            //去掉单引号
+            String charLiteral = primaryExp.getCharacter().substring(1, primaryExp.getCharacter().length() - 1);
+            if (charLiteral.length() > 1)
+                //转义字符在Constant内部处理
+                return new Constant(currentModule.context.getInt32Ty(), charLiteral);
+            else
+                //其他均直接存ascii
+                return new Constant(currentModule.context.getInt32Ty(), String.valueOf((int) charLiteral.charAt(0)));
         }
     }
 
-    public void visitLOrExp(LOrExp lOrExp) {
-        for (LAndExp lAndExp : lOrExp.lAndExps) {
-            visitLAndExp(lAndExp);
+    public void visitLOrExp(LOrExp lOrExp, BasicBlock trueBlock, BasicBlock falseBlock, BasicBlock curCalcBlock) {
+        //递归出口
+        if (lOrExp.lAndExps.size() == 1) {
+            visitLAndExp(lOrExp.lAndExps.get(0), trueBlock, falseBlock, curCalcBlock);
+        }
+        else {
+            BasicBlock newCalcBlock = new BasicBlock(currentFunction);
+            LAndExp[] leftLAndExpsArray = Arrays.copyOfRange(lOrExp.lAndExps.toArray(new LAndExp[0]), 0, lOrExp.lAndExps.size() - 1);
+            ArrayList<LAndExp> leftLAndExps = new ArrayList<>(Arrays.asList(leftLAndExpsArray));
+            LOrExp leftLOrExp = new LOrExp(leftLAndExps, new ArrayList<>()/*useless*/);
+
+            visitLOrExp(leftLOrExp, trueBlock, newCalcBlock, curCalcBlock);
+
+            visitLAndExp(lOrExp.lAndExps.get(lOrExp.lAndExps.size() - 1), trueBlock, falseBlock, newCalcBlock);
         }
     }
 
-    public Value visitLAndExp(LAndExp lAndExp) {
-        for (EqExp eqExp : lAndExp.eqExps) {
-            visitEqExp(eqExp);
+    public void visitLAndExp(LAndExp lAndExp, BasicBlock trueBlock, BasicBlock falseBlock, BasicBlock curCalcBlock) {
+        //递归出口
+        if (lAndExp.eqExps.size() == 1) {
+            Value value = visitEqExp(lAndExp.eqExps.get(0), curCalcBlock);
+            Instruction branchInst = new BranchInst(value, trueBlock, falseBlock);
+            currentBasicBlock.setTerminator(branchInst);
         }
-        //TODO:中间代码生成
-        return null;
+        else {
+            BasicBlock newCalcBlock = new BasicBlock(currentFunction);
+            EqExp[] leftEqExpsArray = Arrays.copyOfRange(lAndExp.eqExps.toArray(new EqExp[0]), 0, lAndExp.eqExps.size() - 1);
+            ArrayList<EqExp> leftEqExps = new ArrayList<>(Arrays.asList(leftEqExpsArray));
+            LAndExp leftLAndExp = new LAndExp(leftEqExps, new ArrayList<>()/*useless*/);
+
+            visitLAndExp(leftLAndExp, newCalcBlock, falseBlock, curCalcBlock);
+
+            Value value = visitEqExp(lAndExp.eqExps.get(lAndExp.eqExps.size() - 1), newCalcBlock);
+            Instruction branchInst = new BranchInst(value, trueBlock, falseBlock);
+            currentBasicBlock.setTerminator(branchInst);
+        }
     }
 
-    public Value visitEqExp(EqExp eqExp) {
-        for (RelExp relExp : eqExp.relExps) {
-            visitRelExp(relExp);
+    //i1
+    public Value visitEqExp(EqExp eqExp, BasicBlock curCalcBlock) {
+        currentBasicBlock = curCalcBlock;
+        currentFunction.addBasicBlock(currentBasicBlock);
+        if (eqExp.relExps.size() == 1) {
+            Value value = visitRelExp(eqExp.relExps.get(0));
+            Op op = new Op(Op.OpType.ne);
+            Instruction icmpInst = new IcmpInst(op, value, new Constant(currentModule.context.getInt32Ty(), "0"));
+            currentBasicBlock.addInstruction(icmpInst);
+            return icmpInst;
         }
-        //TODO:中间代码生成
-        return null;
+        Value value1 = zext(visitRelExp(eqExp.relExps.get(0)));
+        Value value2 = zext(visitRelExp(eqExp.relExps.get(1)));
+        Op op = new Op(Op.Op2Type(eqExp.eqExpOps.get(0)));
+        Instruction icmpInst = new IcmpInst(op, value1, value2);
+        currentBasicBlock.addInstruction(icmpInst);
+        Value res = icmpInst;
+        for (int i = 2; i < eqExp.relExps.size(); i++) {
+            value1 = zext(res);
+            value2 = zext(visitRelExp(eqExp.relExps.get(i)));
+            op = new Op(Op.Op2Type(eqExp.eqExpOps.get(i - 1)));
+            Instruction tmpIcmpInst = new IcmpInst(op, value1, value2);
+            currentBasicBlock.addInstruction(tmpIcmpInst);
+            res = tmpIcmpInst;
+        }
+        return res;
     }
 
+    //i1/i32 visitEqExp使用时会将i1 zext为i32
     public Value visitRelExp(RelExp relExp) {
-        for (AddExp addExp : relExp.addExps) {
-            visitAddExp(addExp);
+        if (relExp.addExps.size() == 1) {
+            return visitAddExp(relExp.addExps.get(0));
         }
-        //TODO:中间代码生成
-        return null;
+        Value value1 = zext(visitAddExp(relExp.addExps.get(0)));
+        Value value2 = zext(visitAddExp(relExp.addExps.get(1)));
+        Op op = new Op(Op.Op2Type(relExp.relExpOps.get(0)));
+        Instruction icmpInst = new IcmpInst(op, value1, value2);
+        currentBasicBlock.addInstruction(icmpInst);
+        Value res = icmpInst;
+        for (int i = 2; i < relExp.addExps.size(); i++) {
+            value1 = zext(res);
+            value2 = zext(visitAddExp(relExp.addExps.get(i)));
+            op = new Op(Op.Op2Type(relExp.relExpOps.get(i - 1)));
+            Instruction tmpIcmpInst = new IcmpInst(op, value1, value2);
+            currentBasicBlock.addInstruction(tmpIcmpInst);
+            res = tmpIcmpInst;
+        }
+        return res;
     }
 
     public Value visitConstExp(ConstExp constExp) {

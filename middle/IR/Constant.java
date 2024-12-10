@@ -14,12 +14,13 @@ public class Constant extends Value {
         int res;
         try {
             res = Integer.parseInt(constantData);
+
         } catch (NumberFormatException e) {
-            if (this.constantData.charAt(1) == '\\') {
-                res = getEscapeCharAscii(this.constantData.charAt(2));
+            if (this.constantData.charAt(0) == '\\') {
+                res = getEscapeCharAscii(this.constantData.charAt(1));
             }
             else
-                res = this.constantData.charAt(1);
+                res = this.constantData.charAt(0);
         }
         return res;
     }
@@ -36,6 +37,7 @@ public class Constant extends Value {
             case 'n' -> 10;
             case 'v' -> 11;
             case 'f' -> 12;
+            case '0' -> 0;
             default -> c;
         };
     }
@@ -53,10 +55,10 @@ public class Constant extends Value {
                     i++;
                     continue;
                 }
-                if (this.constantData.charAt(i) == '0') {
+                /*if (this.constantData.charAt(i) == '0') {
                     sb.append("\\00");
                     continue;
-                }
+                }*/
                 sb.append(this.constantData.charAt(i));
             }
             sb.append("\"");

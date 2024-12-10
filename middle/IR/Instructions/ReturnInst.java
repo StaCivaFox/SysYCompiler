@@ -10,7 +10,7 @@ public class ReturnInst extends Instruction {
 
     //ret void
     public ReturnInst(Type retType) {
-        super(retType);
+        super(retType.context.getVoidTy());
         //this.retType = retType;
         //保存该指令对应的Value
         retType.context.saveValue(this);
@@ -18,7 +18,7 @@ public class ReturnInst extends Instruction {
 
     //ret i32 0 ret i8 0
     public ReturnInst(Type retType, Value retValue) {
-        super(retType);
+        super(retType.context.getVoidTy());
         //this.retType = retType;
         this.retValue = retValue;
         //记录对Value的使用
@@ -30,7 +30,7 @@ public class ReturnInst extends Instruction {
 
     @Override
     public String toString() {
-        if (dataType.equals(dataType.context.getVoidTy()))
+        if (this.retValue == null)
             return "ret void";
         else
             return "ret " + retValue.getUseStr();
